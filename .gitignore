@@ -1,2 +1,20 @@
-# AI Agent Skills
+# Dependencies
+node_modules/
+
+# Test output
+coverage/
+.vitest/
+
+# OS files
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# AI Agent Skills (local installation)
 .github/skills/
