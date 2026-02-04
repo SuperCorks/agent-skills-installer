@@ -1,17 +1,17 @@
-# @supercorks/install-skills
+# @supercorks/skills-installer
 
 Interactive CLI installer for AI agent skills. Selectively install skills for GitHub Copilot, Claude, and other AI assistants using Git sparse-checkout.
 
 ## Usage
 
 ```bash
-npx @supercorks/install-skills install
+npx @supercorks/skills-installer install
 ```
 
 Or with the longer form:
 
 ```bash
-npx --package=@supercorks/install-skills install-skills install
+npx --package=@supercorks/skills-installer skills-installer install
 ```
 
 ## What it does

@@ -1,10 +1,10 @@
 {
-  "name": "@supercorks/install-skills",
+  "name": "@supercorks/skills-installer",
   "version": "1.0.0",
   "description": "Interactive CLI installer for AI agent skills",
   "type": "module",
   "bin": {
-    "install-skills": "./bin/install.js"
+    "skills-installer": "./bin/install.js"
   },
   "files": [
     "bin/",
@@ -12,6 +12,17 @@
   ],
   "scripts": {
     "start": "node bin/install.js install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/supercorks/agent-skills-installer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/supercorks/agent-skills-installer/issues"
+  },
+  "homepage": "https://github.com/supercorks/agent-skills-installer#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "ai",

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * @supercorks/install-skills
+ * @supercorks/skills-installer
  * Interactive CLI installer for AI agent skills
  * 
- * Usage: npx @supercorks/install-skills install
+ * Usage: npx @supercorks/skills-installer install
  */
 
 import { existsSync, appendFileSync, readFileSync, writeFileSync } from 'fs';
@@ -27,16 +27,16 @@ const VERSION = '1.0.0';
  */
 function printUsage() {
   console.log(`
-@supercorks/install-skills v${VERSION}
+@supercorks/skills-installer v${VERSION}
 
 Usage:
-  npx @supercorks/install-skills install    Install skills interactively
-  npx @supercorks/install-skills --help     Show this help message
-  npx @supercorks/install-skills --version  Show version
+  npx @supercorks/skills-installer install    Install skills interactively
+  npx @supercorks/skills-installer --help     Show this help message
+  npx @supercorks/skills-installer --version  Show version
 
 Examples:
-  npx @supercorks/install-skills install
-  npx --package=@supercorks/install-skills install-skills install
+  npx @supercorks/skills-installer install
+  npx --package=@supercorks/skills-installer skills-installer install
 `);
 }
 
