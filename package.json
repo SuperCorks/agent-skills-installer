@@ -1,6 +1,6 @@
 {
   "name": "@supercorks/skills-installer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Interactive CLI installer for AI agent skills",
   "type": "module",
   "bin": {

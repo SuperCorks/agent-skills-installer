@@ -5,13 +5,13 @@ Interactive CLI installer for AI agent skills. Selectively install skills for Gi
 ## Usage
 
 ```bash
-npx @supercorks/skills-installer install
+npx @supercorks/skills-installer
 ```
 
-Or with the longer form:
+Or explicitly with the `install` command:
 
 ```bash
-npx --package=@supercorks/skills-installer skills-installer install
+npx @supercorks/skills-installer install
 ```
 
 ## What it does
@@ -74,7 +74,7 @@ npm install
 # Run locally
 npm start
 # or
-node bin/install.js install
+node bin/install.js
 ```
 
 ## License
