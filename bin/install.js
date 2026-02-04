@@ -30,13 +30,13 @@ function printUsage() {
 @supercorks/skills-installer v${VERSION}
 
 Usage:
-  npx @supercorks/skills-installer install    Install skills interactively
+  npx @supercorks/skills-installer            Install skills interactively (default)
   npx @supercorks/skills-installer --help     Show this help message
   npx @supercorks/skills-installer --version  Show version
 
 Examples:
+  npx @supercorks/skills-installer
   npx @supercorks/skills-installer install
-  npx --package=@supercorks/skills-installer skills-installer install
 `);
 }
 
@@ -143,7 +143,7 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
-  if (!command || command === '--help' || command === '-h') {
+  if (command === '--help' || command === '-h') {
     printUsage();
     process.exit(0);
   }
@@ -153,7 +153,8 @@ async function main() {
     process.exit(0);
   }
 
-  if (command === 'install') {
+  // Default to install if no command or explicit 'install' command
+  if (!command || command === 'install') {
     try {
       await runInstall();
     } catch (error) {
