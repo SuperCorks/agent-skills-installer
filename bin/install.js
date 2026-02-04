@@ -33,7 +33,7 @@ import {
   updateSubagentsSparseCheckout
 } from '../lib/git.js';
 
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 // Common installation paths to check for existing installations
 const SKILL_PATHS = ['.github/skills/', '.claude/skills/'];
@@ -111,6 +111,21 @@ Examples:
   npx @supercorks/skills-installer
   npx @supercorks/skills-installer install
 `);
+}
+
+/**
+ * Check if a path is already in .gitignore
+ * @param {string} gitignorePath - Path to .gitignore file
+ * @param {string} pathToCheck - Path to check
+ * @returns {boolean}
+ */
+function isInGitignore(gitignorePath, pathToCheck) {
+  if (!existsSync(gitignorePath)) {
+    return false;
+  }
+  const normalizedPath = pathToCheck.replace(/\/$/, '');
+  const content = readFileSync(gitignorePath, 'utf-8');
+  return content.includes(normalizedPath);
 }
 
 /**
@@ -211,9 +226,10 @@ async function runSkillsInstall() {
 
   const isManageMode = installedSkills.length > 0;
 
-  // Ask about .gitignore (only for fresh installs)
+  // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
-  if (!isManageMode) {
+  const gitignorePath = resolve(process.cwd(), '.gitignore');
+  if (!isManageMode && !isInGitignore(gitignorePath, installPath)) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
@@ -262,7 +278,6 @@ async function runSkillsInstall() {
 
     // Update .gitignore if requested
     if (shouldGitignore) {
-      const gitignorePath = resolve(process.cwd(), '.gitignore');
       addToGitignore(gitignorePath, installPath);
     }
 
@@ -324,9 +339,10 @@ async function runSubagentsInstall() {
 
   const isManageMode = installedAgents.length > 0;
 
-  // Ask about .gitignore (only for fresh installs)
+  // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
-  if (!isManageMode) {
+  const gitignorePath = resolve(process.cwd(), '.gitignore');
+  if (!isManageMode && !isInGitignore(gitignorePath, installPath)) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
@@ -375,7 +391,6 @@ async function runSubagentsInstall() {
 
     // Update .gitignore if requested
     if (shouldGitignore) {
-      const gitignorePath = resolve(process.cwd(), '.gitignore');
       addToGitignore(gitignorePath, installPath);
     }
 
