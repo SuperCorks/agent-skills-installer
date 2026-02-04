@@ -277,14 +277,14 @@ describe('Install Command', () => {
       const result = await runCLI(tempDir.path, ['install'], { timeout: 3000 });
       
       // Should show banner (proves command was accepted)
-      expect(result.stdout).toContain('AI Agent Skills Installer');
+      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
     });
 
     it('should accept no command (default to install)', async () => {
       const result = await runCLI(tempDir.path, [], { timeout: 3000 });
       
       // Should also show banner
-      expect(result.stdout).toContain('AI Agent Skills Installer');
+      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
     });
   });
 });

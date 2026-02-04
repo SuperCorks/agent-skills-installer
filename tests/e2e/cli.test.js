@@ -203,7 +203,7 @@ describe('Existing Installation Detection', () => {
       const result = await runCLI(tempDir.path, [], { timeout: 3000 });
       
       // The CLI should start and show the banner
-      expect(result.stdout).toContain('AI Agent Skills Installer');
+      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
     });
   });
 
@@ -215,7 +215,7 @@ describe('Existing Installation Detection', () => {
 
       const result = await runCLI(tempDir.path, [], { timeout: 3000 });
       
-      expect(result.stdout).toContain('AI Agent Skills Installer');
+      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
     });
   });
 
@@ -224,9 +224,9 @@ describe('Existing Installation Detection', () => {
       // Empty directory - no existing installation
       const result = await runCLI(tempDir.path, [], { timeout: 3000 });
       
-      expect(result.stdout).toContain('AI Agent Skills Installer');
-      // Should show fetching message for fresh install
-      expect(result.stdout).toContain('Fetching available skills');
+      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
+      // Should show the install type selection prompt
+      expect(result.stdout).toContain('What would you like to install?');
     });
   });
 });
@@ -418,15 +418,16 @@ describe('CLI Output Format', () => {
       const result = await runCLI(tempDir.path, [], { timeout: 3000 });
       
       expect(result.stdout).toContain('🔧');
-      expect(result.stdout).toContain('AI Agent Skills Installer');
+      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
     });
   });
 
   describe('User Story: See progress during skill fetch', () => {
-    it('should show fetching message', async () => {
+    it('should show install type prompt before fetching', async () => {
       const result = await runCLI(tempDir.path, [], { timeout: 5000 });
       
-      expect(result.stdout).toContain('Fetching available skills');
+      // Now the first prompt is install type selection
+      expect(result.stdout).toContain('What would you like to install?');
     });
   });
 });

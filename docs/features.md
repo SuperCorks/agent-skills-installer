@@ -4,11 +4,23 @@ A comprehensive guide to all user-facing features and workflows.
 
 ## Overview
 
-The skills-installer is an interactive CLI tool that allows users to install, update, and manage AI agent skills in their projects. It uses Git sparse-checkout to efficiently clone only the selected skills from the repository.
+The skills-installer is an interactive CLI tool that allows users to install, update, and manage AI agent skills and subagents in their projects. It uses Git sparse-checkout to efficiently clone only the selected items from the respective repositories.
 
-Prerequisites:
-- Node.js >= 18
-- `git` installed and available in `PATH`
+**Supported resources:**
+- **Skills** - Domain-specific knowledge files from `@supercorks/agent-skills`
+- **Subagents** - Specialized AI agents from `@supercorks/subagents`
+
+---
+
+## Installation Type Selection
+
+When running the installer, users first choose what to install:
+
+| Option | Description |
+|--------|-------------|
+| Skills only | Install skills from @supercorks/agent-skills |
+| Subagents only | Install subagents from @supercorks/subagents |
+| Both skills and subagents | Install both resources |
 
 ---
 
@@ -34,17 +46,15 @@ When running in a directory with existing installations, users can modify their 
 4. **Apply changes** - Updates sparse-checkout configuration
    - Adds newly selected skills
    - Removes unchecked skills
-   - Pulls latest updates first (best-effort)
-
-Notes:
-- “Manage mode” is entered whenever the selected install path is already a git repo and the installer can read a non-empty sparse-checkout configuration.
-- If you pick “Custom path…” and the path already contains a skills repo, the installer will also treat it as an existing installation.
+   - Pulls latest updates for unchanged skills
 
 ---
 
 ## User Flows
 
 ### Path Selection
+
+#### Skills Installation Paths
 
 Users can install skills to:
 
@@ -54,7 +64,17 @@ Users can install skills to:
 | Claude Skills | `.claude/skills/` | Standard location for Claude/Anthropic tools |
 | Custom | User-defined | Any custom path |
 
-When existing installations are detected, they appear at the top of the list with skill counts:
+#### Subagents Installation Paths
+
+Users can install subagents to:
+
+| Option | Path | Description |
+|--------|------|-------------|
+| GitHub Agents | `.github/agents/` | Standard location for GitHub Copilot custom agents |
+| Claude Agents | `.claude/agents/` | Standard location for Claude Code subagents |
+| Custom | User-defined | Any custom path |
+
+When existing installations are detected, they appear at the top of the list with counts:
 ```
 ? Select an existing installation to manage, or choose a new location:
 ❯ .github/skills/ (2 skills installed)
@@ -62,8 +82,6 @@ When existing installations are detected, they appear at the top of the list wit
   .claude/skills/
   Custom path...
 ```
-
-If you choose a new location, the installer will create the directory if needed.
 
 ### Skill Selection Interface
 
@@ -89,25 +107,16 @@ Display format:
 
 For fresh installations, users are prompted:
 ```
-? Add ".github/skills/" to .gitignore?
+? Add ".github/skills/" to .gitignore? (Y/n)
 ```
 
 This prevents the cloned skills from being committed to the user's repository while keeping them available locally.
-
-If accepted, the installer adds an entry like:
-- `# AI Agent Skills`
-- `<install-path>/`
 
 ---
 
 ## Output & Feedback
 
-At startup, the CLI prints a short banner:
-```
-🔧 AI Agent Skills Installer
-```
-
-### Fresh Installation Success
+### Fresh Installation Success (Skills)
 
 ```
 ══════════════════════════════════════════════════
@@ -124,11 +133,25 @@ At startup, the CLI prints a short banner:
 ══════════════════════════════════════════════════
 ```
 
-If you opt into `.gitignore` integration, you’ll also see one of these messages:
-- `✅ Added "<install-path>/" to .gitignore`
-- `ℹ️  "<install-path>" is already in .gitignore`
+### Fresh Installation Success (Subagents)
 
-### Manage Mode Success
+```
+══════════════════════════════════════════════════
+✅ Subagents installed successfully!
+══════════════════════════════════════════════════
+
+📁 Location: .github/agents/
+
+🤖 Installed subagents (3):
+   • Developer
+   • Architect
+   • Tester
+
+🚀 Your AI agent will automatically discover these subagents.
+══════════════════════════════════════════════════
+```
+
+### Manage Mode Success (Skills)
 
 ```
 ══════════════════════════════════════════════════
@@ -150,22 +173,38 @@ If you opt into `.gitignore` integration, you’ll also see one of these message
 ══════════════════════════════════════════════════
 ```
 
+### Manage Mode Success (Subagents)
+
+```
+══════════════════════════════════════════════════
+✅ Subagents updated successfully!
+══════════════════════════════════════════════════
+
+📁 Location: .github/agents/
+
+➕ Added (1):
+   • Tester
+
+➖ Removed (1):
+   • Old Agent
+
+🤖 Unchanged (2):
+   • Developer
+   • Architect
+
+🚀 3 subagents now installed.
+══════════════════════════════════════════════════
+```
+
 ### Progress Indicators
 
-- Spinner animation during key network/git operations
-- Step-by-step progress messages during clone/update (printed as each git step begins):
-   - "Initializing sparse clone..."
-   - "Configuring sparse-checkout..."
-   - "Checking out files..."
-   - "Pulling latest changes..."
-   - "Updating sparse-checkout configuration..."
-   - "Applying changes..."
-
-After confirming skill selection, the picker clears the screen and prints a final selection summary:
-```
-📦 Selected skills:
-   ✓ <Skill Name>
-```
+- Spinner animation during network/git operations
+- Step-by-step progress messages:
+  - "Fetching available skills from repository..."
+  - "Initializing sparse clone..."
+  - "Configuring sparse-checkout..."
+  - "Checking out files..."
+  - "Pulling latest changes..."
 
 ---
 
@@ -183,22 +222,32 @@ npx @supercorks/skills-installer install
 # Show help
 npx @supercorks/skills-installer --help
 
-# (Aliases)
-npx @supercorks/skills-installer -h
-
 # Show version
 npx @supercorks/skills-installer --version
-
-# (Aliases)
-npx @supercorks/skills-installer -v
 ```
+
+### Interactive Flow
+
+1. **Select installation type** - Choose skills only, subagents only, or both
+2. **Skills flow** (if selected):
+   - Fetch available skills
+   - Select installation path
+   - Configure .gitignore (fresh install only)
+   - Select skills
+   - Clone and checkout
+3. **Subagents flow** (if selected):
+   - Fetch available subagents
+   - Select installation path
+   - Configure .gitignore (fresh install only)
+   - Select subagents
+   - Clone and checkout
 
 ### Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (git not available, fetch failed, install/update failed, unknown command, etc.) |
+| 1 | Error (git not available, fetch failed, installation failed, etc.) |
 
 ---
 
@@ -207,30 +256,34 @@ npx @supercorks/skills-installer -v
 ### Skill Detection
 
 Skills are detected from the repository by:
-1. Listing all directories at the repository root via the GitHub Contents API
+1. Listing all directories at the repository root
 2. Filtering out excluded folders (`.github`, `.claude`, `node_modules`, hidden folders)
 3. Checking each directory for a `SKILL.md` file
-4. Parsing name/description from `SKILL.md` frontmatter
+4. Parsing frontmatter from `SKILL.md` for name and description
 
-Frontmatter formats supported:
-- A ```skill fenced block containing `---` frontmatter
-- Standard leading `---` frontmatter
+### Subagent Detection
+
+Subagents are detected from the repository by:
+1. Listing all files at the repository root ending with `.agent.md`
+2. Fetching and parsing the frontmatter from each file
+3. Extracting name and description from YAML frontmatter (supports `---` and ` ```chatagent` formats)
 
 ### Sparse Checkout
 
 The installer uses Git sparse-checkout in non-cone mode for precise control:
-- Only selected skill folders are checked out
+- Only selected skill folders or subagent files are checked out
 - Root-level files (README, etc.) are excluded
-- Clone uses `--filter=blob:none` + sparse checkout (minimizes blob download)
-- Full git history is preserved for updates (it is a normal git clone)
+- Full git history is preserved for updates
 
 ### Existing Installation Detection
 
-Scans these common paths for `.git` directories:
+**Skills** - Scans these common paths for `.git` directories:
 - `.github/skills/`
 - `.claude/skills/`
 
-Additionally, if you choose a custom path and it is already a git repo, the installer will attempt to read the currently checked-out skills from its sparse-checkout config.
+**Subagents** - Scans these common paths for `.git` directories:
+- `.github/agents/`
+- `.claude/agents/`
 
 ---
 
@@ -240,11 +293,6 @@ Additionally, if you choose a custom path and it is already a git repo, the inst
 |----------|----------|
 | Git not installed | Error message with instructions |
 | Network failure | Error with details, graceful exit |
-| GitHub API failure/rate limit | Error with HTTP status and message, graceful exit |
 | No skills found | Error message |
 | User cancels (Ctrl+C) | "Installation cancelled" message |
 | No skills selected | Inline error, prevents confirmation |
-| Target path already a git repo (fresh install) | Error message; user must choose a different path |
-| Target path exists and is not empty | Installation fails (git clone cannot proceed); choose an empty/new directory |
-| Target path is a git repo but not a skills installation | May be treated as fresh install and then fail due to existing repo; choose a different path |
-| Unknown command | Prints usage and exits with error |

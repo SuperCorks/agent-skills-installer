@@ -2,7 +2,7 @@
 
 /**
  * @supercorks/skills-installer
- * Interactive CLI installer for AI agent skills
+ * Interactive CLI installer for AI agent skills and subagents
  * 
  * Usage: npx @supercorks/skills-installer install
  */
@@ -10,29 +10,43 @@
 import { existsSync, appendFileSync, readFileSync, writeFileSync } from 'fs';
 import { resolve, join } from 'path';
 import { 
-  promptInstallPath, 
+  promptInstallType,
+  promptInstallPath,
+  promptAgentInstallPath, 
   promptGitignore, 
   promptSkillSelection,
+  promptSubagentSelection,
   showSpinner,
   showSuccess,
+  showSubagentSuccess,
   showError
 } from '../lib/prompts.js';
 import { fetchAvailableSkills } from '../lib/skills.js';
-import { sparseCloneSkills, isGitAvailable, listCheckedOutSkills, updateSparseCheckout } from '../lib/git.js';
+import { fetchAvailableSubagents } from '../lib/subagents.js';
+import { 
+  sparseCloneSkills, 
+  isGitAvailable, 
+  listCheckedOutSkills, 
+  updateSparseCheckout,
+  sparseCloneSubagents,
+  listCheckedOutSubagents,
+  updateSubagentsSparseCheckout
+} from '../lib/git.js';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 // Common installation paths to check for existing installations
-const COMMON_PATHS = ['.github/skills/', '.claude/skills/'];
+const SKILL_PATHS = ['.github/skills/', '.claude/skills/'];
+const AGENT_PATHS = ['.github/agents/', '.claude/agents/'];
 
 /**
  * Detect existing skill installations in common paths
  * @returns {Promise<Array<{path: string, skillCount: number, skills: string[]}>>}
  */
-async function detectExistingInstallations() {
+async function detectExistingSkillInstallations() {
   const installations = [];
   
-  for (const path of COMMON_PATHS) {
+  for (const path of SKILL_PATHS) {
     const absolutePath = resolve(process.cwd(), path);
     const gitDir = join(absolutePath, '.git');
     
@@ -54,6 +68,34 @@ async function detectExistingInstallations() {
 }
 
 /**
+ * Detect existing subagent installations in common paths
+ * @returns {Promise<Array<{path: string, agentCount: number, agents: string[]}>>}
+ */
+async function detectExistingAgentInstallations() {
+  const installations = [];
+  
+  for (const path of AGENT_PATHS) {
+    const absolutePath = resolve(process.cwd(), path);
+    const gitDir = join(absolutePath, '.git');
+    
+    if (existsSync(gitDir)) {
+      try {
+        const agents = await listCheckedOutSubagents(absolutePath);
+        installations.push({
+          path,
+          agentCount: agents.length,
+          agents
+        });
+      } catch {
+        // Ignore errors reading existing installations
+      }
+    }
+  }
+  
+  return installations;
+}
+
+/**
  * Print usage information
  */
 function printUsage() {
@@ -61,7 +103,7 @@ function printUsage() {
 @supercorks/skills-installer v${VERSION}
 
 Usage:
-  npx @supercorks/skills-installer            Install skills interactively (default)
+  npx @supercorks/skills-installer            Install skills/subagents interactively (default)
   npx @supercorks/skills-installer --help     Show this help message
   npx @supercorks/skills-installer --version  Show version
 
@@ -98,7 +140,7 @@ function addToGitignore(gitignorePath, pathToIgnore) {
  * Main installation flow
  */
 async function runInstall() {
-  console.log('\n🔧 AI Agent Skills Installer\n');
+  console.log('\n🔧 AI Agent Skills & Subagents Installer\n');
 
   // Check git availability
   if (!isGitAvailable()) {
@@ -106,7 +148,27 @@ async function runInstall() {
     process.exit(1);
   }
 
-  // Step 1: Fetch available skills
+  // Step 1: Ask what to install
+  const { skills: installSkills, subagents: installSubagents } = await promptInstallType();
+
+  // Install skills if selected
+  if (installSkills) {
+    await runSkillsInstall();
+  }
+
+  // Install subagents if selected
+  if (installSubagents) {
+    await runSubagentsInstall();
+  }
+}
+
+/**
+ * Skills installation flow
+ */
+async function runSkillsInstall() {
+  console.log('\n📦 Skills Installation\n');
+
+  // Fetch available skills
   let skills;
   const fetchSpinner = showSpinner('Fetching available skills from repository...');
   try {
@@ -123,10 +185,10 @@ async function runInstall() {
     process.exit(1);
   }
 
-  // Step 2: Detect existing installations
-  const existingInstalls = await detectExistingInstallations();
+  // Detect existing installations
+  const existingInstalls = await detectExistingSkillInstallations();
 
-  // Step 3: Ask where to install (showing existing installations if any)
+  // Ask where to install (showing existing installations if any)
   const { path: installPath, isExisting } = await promptInstallPath(existingInstalls);
   const absoluteInstallPath = resolve(process.cwd(), installPath);
 
@@ -149,16 +211,16 @@ async function runInstall() {
 
   const isManageMode = installedSkills.length > 0;
 
-  // Step 4: Ask about .gitignore (only for fresh installs)
+  // Ask about .gitignore (only for fresh installs)
   let shouldGitignore = false;
   if (!isManageMode) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
-  // Step 5: Select skills (pre-select installed skills in manage mode)
+  // Select skills (pre-select installed skills in manage mode)
   const selectedSkills = await promptSkillSelection(skills, installedSkills);
 
-  // Step 6: Perform installation or update
+  // Perform installation or update
   console.log('');
   
   if (isManageMode) {
@@ -184,7 +246,7 @@ async function runInstall() {
     }
 
     // Show summary of changes
-    showManageSuccess(installPath, skills, toAdd, toRemove, unchanged);
+    showSkillManageSuccess(installPath, skills, toAdd, toRemove, unchanged);
   } else {
     const installSpinner = showSpinner('Installing selected skills...');
     
@@ -198,13 +260,13 @@ async function runInstall() {
       process.exit(1);
     }
 
-    // Step 7: Update .gitignore if requested
+    // Update .gitignore if requested
     if (shouldGitignore) {
       const gitignorePath = resolve(process.cwd(), '.gitignore');
       addToGitignore(gitignorePath, installPath);
     }
 
-    // Step 8: Show success
+    // Show success
     const installedSkillNames = skills
       .filter(s => selectedSkills.includes(s.folder))
       .map(s => s.name);
@@ -214,14 +276,127 @@ async function runInstall() {
 }
 
 /**
- * Display success message for manage mode with change summary
+ * Subagents installation flow
+ */
+async function runSubagentsInstall() {
+  console.log('\n🤖 Subagents Installation\n');
+
+  // Fetch available subagents
+  let subagents;
+  const fetchSpinner = showSpinner('Fetching available subagents from repository...');
+  try {
+    subagents = await fetchAvailableSubagents();
+    fetchSpinner.stop(`✅ Found ${subagents.length} available subagents`);
+  } catch (error) {
+    fetchSpinner.stop('❌ Failed to fetch subagents');
+    showError(`Could not fetch subagents list: ${error.message}`);
+    process.exit(1);
+  }
+
+  if (subagents.length === 0) {
+    showError('No subagents found in the repository');
+    process.exit(1);
+  }
+
+  // Detect existing installations
+  const existingInstalls = await detectExistingAgentInstallations();
+
+  // Ask where to install (showing existing installations if any)
+  const { path: installPath, isExisting } = await promptAgentInstallPath(existingInstalls);
+  const absoluteInstallPath = resolve(process.cwd(), installPath);
+
+  // Get currently installed subagents if managing existing installation
+  let installedAgents = [];
+  if (isExisting) {
+    const existingInstall = existingInstalls.find(i => i.path === installPath);
+    installedAgents = existingInstall?.agents || [];
+  } else {
+    // Check if manually entered path has an existing installation
+    const gitDir = join(absoluteInstallPath, '.git');
+    if (existsSync(gitDir)) {
+      try {
+        installedAgents = await listCheckedOutSubagents(absoluteInstallPath);
+      } catch {
+        // If we can't read it, treat as fresh install
+      }
+    }
+  }
+
+  const isManageMode = installedAgents.length > 0;
+
+  // Ask about .gitignore (only for fresh installs)
+  let shouldGitignore = false;
+  if (!isManageMode) {
+    shouldGitignore = await promptGitignore(installPath);
+  }
+
+  // Select subagents (pre-select installed ones in manage mode)
+  const selectedAgents = await promptSubagentSelection(subagents, installedAgents);
+
+  // Perform installation or update
+  console.log('');
+  
+  if (isManageMode) {
+    // Calculate changes
+    const toAdd = selectedAgents.filter(s => !installedAgents.includes(s));
+    const toRemove = installedAgents.filter(s => !selectedAgents.includes(s));
+    const unchanged = selectedAgents.filter(s => installedAgents.includes(s));
+
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      console.log('ℹ️  No changes to apply. Pulling latest updates...');
+    }
+
+    const updateSpinner = showSpinner('Updating subagents installation...');
+    
+    try {
+      await updateSubagentsSparseCheckout(absoluteInstallPath, selectedAgents, (message) => {
+        updateSpinner.stop(`   ${message}`);
+      });
+    } catch (error) {
+      updateSpinner.stop('❌ Update failed');
+      showError(error.message);
+      process.exit(1);
+    }
+
+    // Show summary of changes
+    showAgentManageSuccess(installPath, subagents, toAdd, toRemove, unchanged);
+  } else {
+    const installSpinner = showSpinner('Installing selected subagents...');
+    
+    try {
+      await sparseCloneSubagents(installPath, selectedAgents, (message) => {
+        installSpinner.stop(`   ${message}`);
+      });
+    } catch (error) {
+      installSpinner.stop('❌ Installation failed');
+      showError(error.message);
+      process.exit(1);
+    }
+
+    // Update .gitignore if requested
+    if (shouldGitignore) {
+      const gitignorePath = resolve(process.cwd(), '.gitignore');
+      addToGitignore(gitignorePath, installPath);
+    }
+
+    // Show success
+    const installedAgentNames = subagents
+      .filter(s => selectedAgents.includes(s.filename))
+      .map(s => s.name);
+    
+    showSubagentSuccess(installPath, installedAgentNames);
+  }
+}
+
+/**
+ * Display success message for manage mode with skill change summary
  * @param {string} installPath - Where skills are installed
  * @param {Array<{name: string, folder: string}>} allSkills - All available skills
  * @param {string[]} added - Skill folders that were added
  * @param {string[]} removed - Skill folders that were removed
  * @param {string[]} unchanged - Skill folders that were unchanged
  */
-function showManageSuccess(installPath, allSkills, added, removed, unchanged) {
+function showSkillManageSuccess(installPath, allSkills, added, removed, unchanged) {
   const getSkillName = (folder) => allSkills.find(s => s.folder === folder)?.name || folder;
   
   console.log('\n' + '═'.repeat(50));
@@ -246,6 +421,42 @@ function showManageSuccess(installPath, allSkills, added, removed, unchanged) {
   
   const totalInstalled = added.length + unchanged.length;
   console.log(`\n🚀 ${totalInstalled} skill${totalInstalled !== 1 ? 's' : ''} now installed.`);
+  console.log('═'.repeat(50) + '\n');
+}
+
+/**
+ * Display success message for manage mode with subagent change summary
+ * @param {string} installPath - Where subagents are installed
+ * @param {Array<{name: string, filename: string}>} allAgents - All available subagents
+ * @param {string[]} added - Agent filenames that were added
+ * @param {string[]} removed - Agent filenames that were removed
+ * @param {string[]} unchanged - Agent filenames that were unchanged
+ */
+function showAgentManageSuccess(installPath, allAgents, added, removed, unchanged) {
+  const getAgentName = (filename) => allAgents.find(s => s.filename === filename)?.name || filename;
+  
+  console.log('\n' + '═'.repeat(50));
+  console.log('✅ Subagents updated successfully!');
+  console.log('═'.repeat(50));
+  console.log(`\n📁 Location: ${installPath}`);
+  
+  if (added.length > 0) {
+    console.log(`\n➕ Added (${added.length}):`);
+    added.forEach(filename => console.log(`   • ${getAgentName(filename)}`));
+  }
+  
+  if (removed.length > 0) {
+    console.log(`\n➖ Removed (${removed.length}):`);
+    removed.forEach(filename => console.log(`   • ${getAgentName(filename)}`));
+  }
+  
+  if (unchanged.length > 0) {
+    console.log(`\n🤖 Unchanged (${unchanged.length}):`);
+    unchanged.forEach(filename => console.log(`   • ${getAgentName(filename)}`));
+  }
+  
+  const totalInstalled = added.length + unchanged.length;
+  console.log(`\n🚀 ${totalInstalled} subagent${totalInstalled !== 1 ? 's' : ''} now installed.`);
   console.log('═'.repeat(50) + '\n');
 }
 
