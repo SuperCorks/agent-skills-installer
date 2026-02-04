@@ -18,9 +18,40 @@ import {
   showError
 } from '../lib/prompts.js';
 import { fetchAvailableSkills } from '../lib/skills.js';
-import { sparseCloneSkills, isGitAvailable } from '../lib/git.js';
+import { sparseCloneSkills, isGitAvailable, listCheckedOutSkills, updateSparseCheckout } from '../lib/git.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
+
+// Common installation paths to check for existing installations
+const COMMON_PATHS = ['.github/skills/', '.claude/skills/'];
+
+/**
+ * Detect existing skill installations in common paths
+ * @returns {Promise<Array<{path: string, skillCount: number, skills: string[]}>>}
+ */
+async function detectExistingInstallations() {
+  const installations = [];
+  
+  for (const path of COMMON_PATHS) {
+    const absolutePath = resolve(process.cwd(), path);
+    const gitDir = join(absolutePath, '.git');
+    
+    if (existsSync(gitDir)) {
+      try {
+        const skills = await listCheckedOutSkills(absolutePath);
+        installations.push({
+          path,
+          skillCount: skills.length,
+          skills
+        });
+      } catch {
+        // Ignore errors reading existing installations
+      }
+    }
+  }
+  
+  return installations;
+}
 
 /**
  * Print usage information
@@ -92,48 +123,130 @@ async function runInstall() {
     process.exit(1);
   }
 
-  // Step 2: Ask where to install
-  const installPath = await promptInstallPath();
+  // Step 2: Detect existing installations
+  const existingInstalls = await detectExistingInstallations();
+
+  // Step 3: Ask where to install (showing existing installations if any)
+  const { path: installPath, isExisting } = await promptInstallPath(existingInstalls);
   const absoluteInstallPath = resolve(process.cwd(), installPath);
 
-  // Check if path already exists with a git repo
-  if (existsSync(join(absoluteInstallPath, '.git'))) {
-    showError(`"${installPath}" already contains a git repository. Please remove it first or choose a different path.`);
-    process.exit(1);
+  // Get currently installed skills if managing existing installation
+  let installedSkills = [];
+  if (isExisting) {
+    const existingInstall = existingInstalls.find(i => i.path === installPath);
+    installedSkills = existingInstall?.skills || [];
+  } else {
+    // Check if manually entered path has an existing installation
+    const gitDir = join(absoluteInstallPath, '.git');
+    if (existsSync(gitDir)) {
+      try {
+        installedSkills = await listCheckedOutSkills(absoluteInstallPath);
+      } catch {
+        // If we can't read it, treat as fresh install
+      }
+    }
   }
 
-  // Step 3: Ask about .gitignore
-  const shouldGitignore = await promptGitignore(installPath);
+  const isManageMode = installedSkills.length > 0;
 
-  // Step 4: Select skills
-  const selectedSkills = await promptSkillSelection(skills);
+  // Step 4: Ask about .gitignore (only for fresh installs)
+  let shouldGitignore = false;
+  if (!isManageMode) {
+    shouldGitignore = await promptGitignore(installPath);
+  }
 
-  // Step 5: Perform installation
+  // Step 5: Select skills (pre-select installed skills in manage mode)
+  const selectedSkills = await promptSkillSelection(skills, installedSkills);
+
+  // Step 6: Perform installation or update
   console.log('');
-  const installSpinner = showSpinner('Installing selected skills...');
   
-  try {
-    await sparseCloneSkills(installPath, selectedSkills, (message) => {
-      installSpinner.stop(`   ${message}`);
-    });
-  } catch (error) {
-    installSpinner.stop('❌ Installation failed');
-    showError(error.message);
-    process.exit(1);
-  }
+  if (isManageMode) {
+    // Calculate changes
+    const toAdd = selectedSkills.filter(s => !installedSkills.includes(s));
+    const toRemove = installedSkills.filter(s => !selectedSkills.includes(s));
+    const unchanged = selectedSkills.filter(s => installedSkills.includes(s));
 
-  // Step 6: Update .gitignore if requested
-  if (shouldGitignore) {
-    const gitignorePath = resolve(process.cwd(), '.gitignore');
-    addToGitignore(gitignorePath, installPath);
-  }
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      console.log('ℹ️  No changes to apply. Pulling latest updates...');
+    }
 
-  // Step 7: Show success
-  const installedSkillNames = skills
-    .filter(s => selectedSkills.includes(s.folder))
-    .map(s => s.name);
+    const updateSpinner = showSpinner('Updating skills installation...');
+    
+    try {
+      await updateSparseCheckout(absoluteInstallPath, selectedSkills, (message) => {
+        updateSpinner.stop(`   ${message}`);
+      });
+    } catch (error) {
+      updateSpinner.stop('❌ Update failed');
+      showError(error.message);
+      process.exit(1);
+    }
+
+    // Show summary of changes
+    showManageSuccess(installPath, skills, toAdd, toRemove, unchanged);
+  } else {
+    const installSpinner = showSpinner('Installing selected skills...');
+    
+    try {
+      await sparseCloneSkills(installPath, selectedSkills, (message) => {
+        installSpinner.stop(`   ${message}`);
+      });
+    } catch (error) {
+      installSpinner.stop('❌ Installation failed');
+      showError(error.message);
+      process.exit(1);
+    }
+
+    // Step 7: Update .gitignore if requested
+    if (shouldGitignore) {
+      const gitignorePath = resolve(process.cwd(), '.gitignore');
+      addToGitignore(gitignorePath, installPath);
+    }
+
+    // Step 8: Show success
+    const installedSkillNames = skills
+      .filter(s => selectedSkills.includes(s.folder))
+      .map(s => s.name);
+    
+    showSuccess(installPath, installedSkillNames);
+  }
+}
+
+/**
+ * Display success message for manage mode with change summary
+ * @param {string} installPath - Where skills are installed
+ * @param {Array<{name: string, folder: string}>} allSkills - All available skills
+ * @param {string[]} added - Skill folders that were added
+ * @param {string[]} removed - Skill folders that were removed
+ * @param {string[]} unchanged - Skill folders that were unchanged
+ */
+function showManageSuccess(installPath, allSkills, added, removed, unchanged) {
+  const getSkillName = (folder) => allSkills.find(s => s.folder === folder)?.name || folder;
   
-  showSuccess(installPath, installedSkillNames);
+  console.log('\n' + '═'.repeat(50));
+  console.log('✅ Skills updated successfully!');
+  console.log('═'.repeat(50));
+  console.log(`\n📁 Location: ${installPath}`);
+  
+  if (added.length > 0) {
+    console.log(`\n➕ Added (${added.length}):`);
+    added.forEach(folder => console.log(`   • ${getSkillName(folder)}`));
+  }
+  
+  if (removed.length > 0) {
+    console.log(`\n➖ Removed (${removed.length}):`);
+    removed.forEach(folder => console.log(`   • ${getSkillName(folder)}`));
+  }
+  
+  if (unchanged.length > 0) {
+    console.log(`\n📦 Unchanged (${unchanged.length}):`);
+    unchanged.forEach(folder => console.log(`   • ${getSkillName(folder)}`));
+  }
+  
+  const totalInstalled = added.length + unchanged.length;
+  console.log(`\n🚀 ${totalInstalled} skill${totalInstalled !== 1 ? 's' : ''} now installed.`);
+  console.log('═'.repeat(50) + '\n');
 }
 
 /**
