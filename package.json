@@ -1,0 +1,33 @@
+{
+  "name": "@supercorks/install-skills",
+  "version": "1.0.0",
+  "description": "Interactive CLI installer for AI agent skills",
+  "type": "module",
+  "bin": {
+    "install-skills": "./bin/install.js"
+  },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
+  "scripts": {
+    "start": "node bin/install.js install"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "skills",
+    "copilot",
+    "claude",
+    "installer",
+    "cli"
+  ],
+  "author": "supercorks",
+  "license": "MIT",
+  "dependencies": {
+    "inquirer": "^9.2.12"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
