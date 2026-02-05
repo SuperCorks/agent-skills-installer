@@ -30,7 +30,9 @@ import {
   updateSparseCheckout,
   sparseCloneSubagents,
   listCheckedOutSubagents,
-  updateSubagentsSparseCheckout
+  updateSubagentsSparseCheckout,
+  checkSkillsForUpdates,
+  checkSubagentsForUpdates
 } from '../lib/git.js';
 
 const VERSION = '1.3.0';
@@ -226,6 +228,22 @@ async function runSkillsInstall() {
 
   const isManageMode = installedSkills.length > 0;
 
+  // Check for updates if in manage mode
+  let skillsNeedingUpdate = new Set();
+  if (isManageMode) {
+    const updateSpinner = showSpinner('Checking for available updates...');
+    try {
+      skillsNeedingUpdate = await checkSkillsForUpdates(absoluteInstallPath, installedSkills);
+      if (skillsNeedingUpdate.size > 0) {
+        updateSpinner.stop(`✅ Found ${skillsNeedingUpdate.size} skill${skillsNeedingUpdate.size !== 1 ? 's' : ''} with updates available`);
+      } else {
+        updateSpinner.stop('✅ All installed skills are up to date');
+      }
+    } catch {
+      updateSpinner.stop('⚠️  Could not check for updates');
+    }
+  }
+
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
   const gitignorePath = resolve(process.cwd(), '.gitignore');
@@ -234,7 +252,7 @@ async function runSkillsInstall() {
   }
 
   // Select skills (pre-select installed skills in manage mode)
-  const selectedSkills = await promptSkillSelection(skills, installedSkills);
+  const selectedSkills = await promptSkillSelection(skills, installedSkills, skillsNeedingUpdate);
 
   // Perform installation or update
   console.log('');
@@ -339,6 +357,22 @@ async function runSubagentsInstall() {
 
   const isManageMode = installedAgents.length > 0;
 
+  // Check for updates if in manage mode
+  let subagentsNeedingUpdate = new Set();
+  if (isManageMode) {
+    const updateSpinner = showSpinner('Checking for available updates...');
+    try {
+      subagentsNeedingUpdate = await checkSubagentsForUpdates(absoluteInstallPath, installedAgents);
+      if (subagentsNeedingUpdate.size > 0) {
+        updateSpinner.stop(`✅ Found ${subagentsNeedingUpdate.size} subagent${subagentsNeedingUpdate.size !== 1 ? 's' : ''} with updates available`);
+      } else {
+        updateSpinner.stop('✅ All installed subagents are up to date');
+      }
+    } catch {
+      updateSpinner.stop('⚠️  Could not check for updates');
+    }
+  }
+
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
   const gitignorePath = resolve(process.cwd(), '.gitignore');
@@ -347,7 +381,7 @@ async function runSubagentsInstall() {
   }
 
   // Select subagents (pre-select installed ones in manage mode)
-  const selectedAgents = await promptSubagentSelection(subagents, installedAgents);
+  const selectedAgents = await promptSubagentSelection(subagents, installedAgents, subagentsNeedingUpdate);
 
   // Perform installation or update
   console.log('');

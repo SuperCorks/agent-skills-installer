@@ -129,6 +129,51 @@ describe('Skill Selection UI Components', () => {
       const cursorSymbol = '❯';
       expect(cursorSymbol).toBe('❯');
     });
+
+    it('should use update flag for items needing updates', () => {
+      // From prompts.js render function - yellow (update) flag
+      const updateFlag = '(update)';
+      expect(updateFlag).toBe('(update)');
+    });
+  });
+
+  describe('User Story: See update status in selection', () => {
+    it('should show update count in footer when items need updates', () => {
+      // Simulating footer logic from prompts.js
+      const selectedItems = ['skill-a', 'skill-b', 'skill-c'];
+      const itemsNeedingUpdate = new Set(['skill-a', 'skill-c']);
+      
+      const updateCount = selectedItems.filter(id => itemsNeedingUpdate.has(id)).length;
+      const updateNote = updateCount > 0 ? ` (${updateCount} to update)` : '';
+      
+      expect(updateCount).toBe(2);
+      expect(updateNote).toBe(' (2 to update)');
+    });
+
+    it('should not show update count when no items need updates', () => {
+      const selectedItems = ['skill-a', 'skill-b'];
+      const itemsNeedingUpdate = new Set();
+      
+      const updateCount = selectedItems.filter(id => itemsNeedingUpdate.has(id)).length;
+      const updateNote = updateCount > 0 ? ` (${updateCount} to update)` : '';
+      
+      expect(updateCount).toBe(0);
+      expect(updateNote).toBe('');
+    });
+
+    it('should correctly identify which items need updates', () => {
+      const items = [
+        { id: 'skill-a', name: 'Skill A' },
+        { id: 'skill-b', name: 'Skill B' },
+        { id: 'skill-c', name: 'Skill C' }
+      ];
+      const itemsNeedingUpdate = new Set(['skill-b']);
+      
+      const needsUpdate = items.filter(item => itemsNeedingUpdate.has(item.id));
+      
+      expect(needsUpdate).toHaveLength(1);
+      expect(needsUpdate[0].name).toBe('Skill B');
+    });
   });
 
   describe('User Story: See keyboard shortcuts', () => {

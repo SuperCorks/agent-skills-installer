@@ -13,6 +13,8 @@ import { execSync } from 'child_process';
 import {
   isGitAvailable,
   listCheckedOutSkills,
+  checkSkillsForUpdates,
+  checkSubagentsForUpdates,
 } from '../../lib/git.js';
 
 // ============================================================================
@@ -321,6 +323,75 @@ describe('Git Error Handling', () => {
       // Don't create required files
       
       await expect(listCheckedOutSkills(tempDir.path)).resolves.toHaveLength(0);
+    });
+  });
+});
+
+// ============================================================================
+// Update Detection Tests
+// ============================================================================
+
+describe('Update Detection', () => {
+  let tempDir;
+
+  beforeEach(() => {
+    tempDir = createTempDir();
+  });
+
+  afterEach(() => {
+    tempDir?.cleanup();
+  });
+
+  describe('User Story: Check skills for available updates', () => {
+    it('should return empty set for non-git directory', async () => {
+      const result = await checkSkillsForUpdates(tempDir.path, ['skill-a']);
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return empty set when fetch fails', async () => {
+      // Create mock git repo without remote configured properly
+      createMockGitRepo(tempDir.path, ['skill-a']);
+      
+      const result = await checkSkillsForUpdates(tempDir.path, ['skill-a']);
+      expect(result).toBeInstanceOf(Set);
+      // Should gracefully return empty set on error
+      expect(result.size).toBe(0);
+    });
+
+    it('should accept array of skill folders to check', async () => {
+      createMockGitRepo(tempDir.path, ['skill-a', 'skill-b']);
+      
+      // Function should accept and process array
+      const skillsToCheck = ['skill-a', 'skill-b', 'skill-c'];
+      const result = await checkSkillsForUpdates(tempDir.path, skillsToCheck);
+      
+      expect(result).toBeInstanceOf(Set);
+    });
+  });
+
+  describe('User Story: Check subagents for available updates', () => {
+    it('should return empty set for non-git directory', async () => {
+      const result = await checkSubagentsForUpdates(tempDir.path, ['Agent.agent.md']);
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
+    });
+
+    it('should return empty set when fetch fails', async () => {
+      createMockGitRepo(tempDir.path, []);
+      
+      const result = await checkSubagentsForUpdates(tempDir.path, ['Agent.agent.md']);
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
+    });
+
+    it('should accept array of agent filenames to check', async () => {
+      createMockGitRepo(tempDir.path, []);
+      
+      const agentsToCheck = ['Developer.agent.md', 'Tester.agent.md'];
+      const result = await checkSubagentsForUpdates(tempDir.path, agentsToCheck);
+      
+      expect(result).toBeInstanceOf(Set);
     });
   });
 });
