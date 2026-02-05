@@ -34,8 +34,10 @@ import {
   checkSkillsForUpdates,
   checkSubagentsForUpdates
 } from '../lib/git.js';
+import { createRequire } from 'module';
 
-const VERSION = '1.3.0';
+const require = createRequire(import.meta.url);
+const { version: VERSION } = require('../package.json');
 
 // Common installation paths to check for existing installations
 const SKILL_PATHS = ['.github/skills/', '.claude/skills/'];
