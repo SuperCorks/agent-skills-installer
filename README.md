@@ -18,6 +18,7 @@ npx @supercorks/skills-installer install
 
 1. **Choose installation path** - Select where skills should be installed:
    - `.github/skills/` (GitHub Copilot default)
+   - `.codex/skills/` (Codex)
    - `.claude/skills/` (Claude)
    - Custom path of your choice
 

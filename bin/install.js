@@ -40,7 +40,7 @@ const require = createRequire(import.meta.url);
 const { version: VERSION } = require('../package.json');
 
 // Common installation paths to check for existing installations
-const SKILL_PATHS = ['.github/skills/', '.claude/skills/'];
+const SKILL_PATHS = ['.github/skills/', '.codex/skills/', '.claude/skills/'];
 const AGENT_PATHS = ['.github/agents/', '.claude/agents/'];
 
 /**

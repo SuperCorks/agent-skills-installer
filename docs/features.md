@@ -61,6 +61,7 @@ Users can install skills to:
 | Option | Path | Description |
 |--------|------|-------------|
 | GitHub Skills | `.github/skills/` | Standard location for GitHub-aware tools |
+| Codex Skills | `.codex/skills/` | Standard location for Codex skills |
 | Claude Skills | `.claude/skills/` | Standard location for Claude/Anthropic tools |
 | Custom | User-defined | Any custom path |
 
@@ -79,6 +80,7 @@ When existing installations are detected, they appear at the top of the list wit
 ? Select an existing installation to manage, or choose a new location:
 ❯ .github/skills/ (2 skills installed)
   ── New installation ──
+  .codex/skills/
   .claude/skills/
   Custom path...
 ```
@@ -279,6 +281,7 @@ The installer uses Git sparse-checkout in non-cone mode for precise control:
 
 **Skills** - Scans these common paths for `.git` directories:
 - `.github/skills/`
+- `.codex/skills/`
 - `.claude/skills/`
 
 **Subagents** - Scans these common paths for `.git` directories:
