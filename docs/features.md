@@ -31,7 +31,7 @@ When running the installer, users first choose what to install:
 When no existing installation is detected, users go through the full installation flow:
 
 1. **Fetch available skills** - Retrieves the list of skills from the GitHub repository
-2. **Select installation path** - Choose where to install skills
+2. **Select installation path(s)** - Choose one or more locations to install skills
 3. **Configure .gitignore** - Option to exclude skills from version control
 4. **Select skills** - Interactive skill picker
 5. **Clone and checkout** - Performs sparse clone with selected skills
@@ -41,7 +41,7 @@ When no existing installation is detected, users go through the full installatio
 When running in a directory with existing installations, users can modify their skill selection:
 
 1. **Detect existing installations** - Scans common paths for existing skill repos
-2. **Select installation to manage** - Shows existing installations with skill counts
+2. **Select installation(s) to manage** - Shows existing installations with skill counts
 3. **Modify skill selection** - Pre-selected checkboxes for installed skills
 4. **Apply changes** - Updates sparse-checkout configuration
    - Adds newly selected skills
@@ -61,7 +61,8 @@ Users can install skills to:
 | Option | Path | Description |
 |--------|------|-------------|
 | GitHub Skills | `.github/skills/` | Standard location for GitHub-aware tools |
-| Codex Skills | `.codex/skills/` | Standard location for Codex skills |
+| Agent Skills | `.agents/skills/` | Standard location for local agent workspace skills |
+| System Skills | `/etc/codex/skills/` | System-level shared skills location |
 | Claude Skills | `.claude/skills/` | Standard location for Claude/Anthropic tools |
 | Custom | User-defined | Any custom path |
 
@@ -77,10 +78,11 @@ Users can install subagents to:
 
 When existing installations are detected, they appear at the top of the list with counts:
 ```
-? Select an existing installation to manage, or choose a new location:
+? Select one or more installations to manage, or choose new locations:
 ❯ .github/skills/ (2 skills installed)
   ── New installation ──
-  .codex/skills/
+  .agents/skills/
+  /etc/codex/skills/
   .claude/skills/
   Custom path...
 ```
@@ -281,7 +283,8 @@ The installer uses Git sparse-checkout in non-cone mode for precise control:
 
 **Skills** - Scans these common paths for `.git` directories:
 - `.github/skills/`
-- `.codex/skills/`
+- `.agents/skills/`
+- `/etc/codex/skills/`
 - `.claude/skills/`
 
 **Subagents** - Scans these common paths for `.git` directories:

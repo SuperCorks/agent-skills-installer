@@ -95,17 +95,22 @@ describe('Path Selection Options', () => {
   describe('User Story: Standard installation paths', () => {
     it('should include .github/skills as standard option', () => {
       // Based on prompts.js PATH_CHOICES
-      const standardPaths = ['.github/skills/', '.codex/skills/', '.claude/skills/'];
+      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.github/skills/');
     });
 
-    it('should include .codex/skills as standard option', () => {
-      const standardPaths = ['.github/skills/', '.codex/skills/', '.claude/skills/'];
-      expect(standardPaths).toContain('.codex/skills/');
+    it('should include ./.agents/skills as standard option', () => {
+      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('.agents/skills/');
+    });
+
+    it('should include /etc/codes/skills as standard option', () => {
+      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('/etc/codex/skills/');
     });
 
     it('should include .claude/skills as standard option', () => {
-      const standardPaths = ['.github/skills/', '.codex/skills/', '.claude/skills/'];
+      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.claude/skills/');
     });
   });

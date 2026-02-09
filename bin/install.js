@@ -40,7 +40,7 @@ const require = createRequire(import.meta.url);
 const { version: VERSION } = require('../package.json');
 
 // Common installation paths to check for existing installations
-const SKILL_PATHS = ['.github/skills/', '.codex/skills/', '.claude/skills/'];
+const SKILL_PATHS = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
 const AGENT_PATHS = ['.github/agents/', '.claude/agents/'];
 
 /**
@@ -208,7 +208,25 @@ async function runSkillsInstall() {
   const existingInstalls = await detectExistingSkillInstallations();
 
   // Ask where to install (showing existing installations if any)
-  const { path: installPath, isExisting } = await promptInstallPath(existingInstalls);
+  const installTargets = await promptInstallPath(existingInstalls);
+
+  for (let i = 0; i < installTargets.length; i++) {
+    const target = installTargets[i];
+    if (installTargets.length > 1) {
+      console.log(`\n📍 Skills target ${i + 1}/${installTargets.length}: ${target.path}`);
+    }
+    await runSkillsInstallForTarget(skills, existingInstalls, target);
+  }
+}
+
+/**
+ * Install/update skills for a specific target path
+ * @param {Array<{name: string, description: string, folder: string}>} skills
+ * @param {Array<{path: string, skillCount: number, skills: string[]}>} existingInstalls
+ * @param {{path: string, isExisting: boolean}} target
+ */
+async function runSkillsInstallForTarget(skills, existingInstalls, target) {
+  const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolve(process.cwd(), installPath);
 
   // Get currently installed skills if managing existing installation
@@ -337,7 +355,25 @@ async function runSubagentsInstall() {
   const existingInstalls = await detectExistingAgentInstallations();
 
   // Ask where to install (showing existing installations if any)
-  const { path: installPath, isExisting } = await promptAgentInstallPath(existingInstalls);
+  const installTargets = await promptAgentInstallPath(existingInstalls);
+
+  for (let i = 0; i < installTargets.length; i++) {
+    const target = installTargets[i];
+    if (installTargets.length > 1) {
+      console.log(`\n📍 Subagents target ${i + 1}/${installTargets.length}: ${target.path}`);
+    }
+    await runSubagentsInstallForTarget(subagents, existingInstalls, target);
+  }
+}
+
+/**
+ * Install/update subagents for a specific target path
+ * @param {Array<{name: string, description: string, filename: string}>} subagents
+ * @param {Array<{path: string, agentCount: number, agents: string[]}>} existingInstalls
+ * @param {{path: string, isExisting: boolean}} target
+ */
+async function runSubagentsInstallForTarget(subagents, existingInstalls, target) {
+  const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolve(process.cwd(), installPath);
 
   // Get currently installed subagents if managing existing installation
