@@ -1,6 +1,6 @@
 # @supercorks/skills-installer
 
-Interactive CLI installer for AI agent skills. Selectively install skills for GitHub Copilot, Claude, and other AI assistants using Git sparse-checkout.
+Interactive CLI installer for AI agent skills and subagents. Selectively install resources for GitHub Copilot, Codex, Claude, and other AI assistants using Git sparse-checkout.
 
 ## Usage
 
@@ -16,21 +16,32 @@ npx @supercorks/skills-installer install
 
 ## What it does
 
-1. **Choose installation path(s)** - Select one or more locations where skills should be installed:
+1. **Choose installation type** - Install skills, subagents, or both.
+
+2. **Choose installation path(s)** - Select one or more locations where resources should be installed:
    - `.github/skills/` (Copilot)
    - `~/.codex/skills/` (Codex)
    - `.claude/skills/` (Claude)
+   - `.github/agents/` (Copilot)
+   - `.agents/agents/` (Codex)
+   - `.claude/agents/` (Claude)
    - Custom path of your choice
 
-2. **Gitignore option** - Optionally add the installation path to `.gitignore`
+3. **Gitignore option** - Optionally add the installation path to `.gitignore`
 
-3. **Select skills** - Interactive checkbox to pick which skills to install:
+4. **Select skills/subagents** - Interactive checkbox to pick what to install:
    - Use `↑`/`↓` to navigate
    - Use `SPACE` to toggle selection
+   - Use `→` to expand and lazy-load descriptions
    - Use `A` to toggle all
    - Press `ENTER` to confirm
 
-4. **Sparse clone** - Only downloads the selected skills using Git sparse-checkout, keeping the download minimal while preserving full git functionality.
+5. **Sparse clone** - Only downloads selected skills/subagents using Git sparse-checkout, keeping the download minimal while preserving full git functionality.
+
+## Installed repositories
+
+- Skills repo: [https://github.com/supercorks/agent-skills](https://github.com/supercorks/agent-skills)
+- Subagents repo: [https://github.com/supercorks/subagents](https://github.com/supercorks/subagents)
 
 ## Features
 
