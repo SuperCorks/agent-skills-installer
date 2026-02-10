@@ -50,6 +50,10 @@ function resolveInstallPath(path) {
   return resolve(process.cwd(), path);
 }
 
+function isHomePath(path) {
+  return path === '~' || path.startsWith('~/');
+}
+
 /**
  * Detect existing skill installations in common paths
  * @returns {Promise<Array<{path: string, skillCount: number, skills: string[]}>>}
@@ -235,6 +239,8 @@ async function runSkillsInstall() {
 async function runSkillsInstallForTarget(skills, existingInstalls, target) {
   const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolveInstallPath(installPath);
+  const gitDir = join(absoluteInstallPath, '.git');
+  const hasExistingRepo = existsSync(gitDir);
 
   // Get currently installed skills if managing existing installation
   let installedSkills = [];
@@ -243,17 +249,17 @@ async function runSkillsInstallForTarget(skills, existingInstalls, target) {
     installedSkills = existingInstall?.skills || [];
   } else {
     // Check if manually entered path has an existing installation
-    const gitDir = join(absoluteInstallPath, '.git');
-    if (existsSync(gitDir)) {
+    if (hasExistingRepo) {
       try {
         installedSkills = await listCheckedOutSkills(absoluteInstallPath);
       } catch {
-        // If we can't read it, treat as fresh install
+        // If repo exists but sparse-checkout can't be read, still treat as manage mode.
+        // Prompt will default to selecting all skills.
       }
     }
   }
 
-  const isManageMode = installedSkills.length > 0;
+  const isManageMode = isExisting || hasExistingRepo || installedSkills.length > 0;
 
   // Check for updates if in manage mode
   let skillsNeedingUpdate = new Set();
@@ -274,7 +280,7 @@ async function runSkillsInstallForTarget(skills, existingInstalls, target) {
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
   const gitignorePath = resolveInstallPath('.gitignore');
-  if (!isManageMode && !isInGitignore(gitignorePath, installPath)) {
+  if (!isManageMode && !isHomePath(installPath) && !isInGitignore(gitignorePath, installPath)) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
@@ -387,6 +393,8 @@ async function runSubagentsInstall() {
 async function runSubagentsInstallForTarget(subagents, existingInstalls, target) {
   const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolveInstallPath(installPath);
+  const gitDir = join(absoluteInstallPath, '.git');
+  const hasExistingRepo = existsSync(gitDir);
 
   // Get currently installed subagents if managing existing installation
   let installedAgents = [];
@@ -395,17 +403,17 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
     installedAgents = existingInstall?.agents || [];
   } else {
     // Check if manually entered path has an existing installation
-    const gitDir = join(absoluteInstallPath, '.git');
-    if (existsSync(gitDir)) {
+    if (hasExistingRepo) {
       try {
         installedAgents = await listCheckedOutSubagents(absoluteInstallPath);
       } catch {
-        // If we can't read it, treat as fresh install
+        // If repo exists but sparse-checkout can't be read, still treat as manage mode.
+        // Prompt will default to selecting all subagents.
       }
     }
   }
 
-  const isManageMode = installedAgents.length > 0;
+  const isManageMode = isExisting || hasExistingRepo || installedAgents.length > 0;
 
   // Check for updates if in manage mode
   let subagentsNeedingUpdate = new Set();
@@ -426,7 +434,7 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
   const gitignorePath = resolveInstallPath('.gitignore');
-  if (!isManageMode && !isInGitignore(gitignorePath, installPath)) {
+  if (!isManageMode && !isHomePath(installPath) && !isInGitignore(gitignorePath, installPath)) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
