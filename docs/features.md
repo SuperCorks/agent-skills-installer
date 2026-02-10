@@ -60,10 +60,9 @@ Users can install skills to:
 
 | Option | Path | Description |
 |--------|------|-------------|
-| GitHub Skills | `.github/skills/` | Standard location for GitHub-aware tools |
-| Agent Skills | `.agents/skills/` | Standard location for local agent workspace skills |
-| System Skills | `/etc/codex/skills/` | System-level shared skills location |
-| Claude Skills | `.claude/skills/` | Standard location for Claude/Anthropic tools |
+| GitHub Skills | `.github/skills/` (Copilot) | Standard location for GitHub-aware tools |
+| Codex Home Skills | `~/.codex/skills/` (Codex) | User-level Codex skills location |
+| Claude Skills | `.claude/skills/` (Claude) | Standard location for Claude/Anthropic tools |
 | Custom | User-defined | Any custom path |
 
 #### Subagents Installation Paths
@@ -72,8 +71,9 @@ Users can install subagents to:
 
 | Option | Path | Description |
 |--------|------|-------------|
-| GitHub Agents | `.github/agents/` | Standard location for GitHub Copilot custom agents |
-| Claude Agents | `.claude/agents/` | Standard location for Claude Code subagents |
+| GitHub Agents | `.github/agents/` (Copilot) | Standard location for GitHub Copilot custom agents |
+| Codex Agents | `.agents/agents/` (Codex) | Standard location for Codex project agents |
+| Claude Agents | `.claude/agents/` (Claude) | Standard location for Claude Code subagents |
 | Custom | User-defined | Any custom path |
 
 When existing installations are detected, they appear at the top of the list with counts:
@@ -81,9 +81,8 @@ When existing installations are detected, they appear at the top of the list wit
 ? Select one or more installations to manage, or choose new locations:
 ❯ .github/skills/ (2 skills installed)
   ── New installation ──
-  .agents/skills/
-  /etc/codex/skills/
-  .claude/skills/
+  ~/.codex/skills/ (Codex)
+  .claude/skills/ (Claude)
   Custom path...
 ```
 
@@ -282,14 +281,14 @@ The installer uses Git sparse-checkout in non-cone mode for precise control:
 ### Existing Installation Detection
 
 **Skills** - Scans these common paths for `.git` directories:
-- `.github/skills/`
-- `.agents/skills/`
-- `/etc/codex/skills/`
-- `.claude/skills/`
+- `.github/skills/` (Copilot)
+- `~/.codex/skills/` (Codex)
+- `.claude/skills/` (Claude)
 
 **Subagents** - Scans these common paths for `.git` directories:
-- `.github/agents/`
-- `.claude/agents/`
+- `.github/agents/` (Copilot)
+- `.agents/agents/` (Codex)
+- `.claude/agents/` (Claude)
 
 ---
 

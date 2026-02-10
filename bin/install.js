@@ -9,6 +9,7 @@
 
 import { existsSync, appendFileSync, readFileSync, writeFileSync } from 'fs';
 import { resolve, join } from 'path';
+import { homedir } from 'os';
 import { 
   promptInstallType,
   promptInstallPath,
@@ -40,8 +41,14 @@ const require = createRequire(import.meta.url);
 const { version: VERSION } = require('../package.json');
 
 // Common installation paths to check for existing installations
-const SKILL_PATHS = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
-const AGENT_PATHS = ['.github/agents/', '.claude/agents/'];
+const SKILL_PATHS = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
+const AGENT_PATHS = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+
+function resolveInstallPath(path) {
+  if (path === '~') return homedir();
+  if (path.startsWith('~/')) return resolve(homedir(), path.slice(2));
+  return resolve(process.cwd(), path);
+}
 
 /**
  * Detect existing skill installations in common paths
@@ -51,7 +58,7 @@ async function detectExistingSkillInstallations() {
   const installations = [];
   
   for (const path of SKILL_PATHS) {
-    const absolutePath = resolve(process.cwd(), path);
+    const absolutePath = resolveInstallPath(path);
     const gitDir = join(absolutePath, '.git');
     
     if (existsSync(gitDir)) {
@@ -79,7 +86,7 @@ async function detectExistingAgentInstallations() {
   const installations = [];
   
   for (const path of AGENT_PATHS) {
-    const absolutePath = resolve(process.cwd(), path);
+    const absolutePath = resolveInstallPath(path);
     const gitDir = join(absolutePath, '.git');
     
     if (existsSync(gitDir)) {
@@ -227,7 +234,7 @@ async function runSkillsInstall() {
  */
 async function runSkillsInstallForTarget(skills, existingInstalls, target) {
   const { path: installPath, isExisting } = target;
-  const absoluteInstallPath = resolve(process.cwd(), installPath);
+  const absoluteInstallPath = resolveInstallPath(installPath);
 
   // Get currently installed skills if managing existing installation
   let installedSkills = [];
@@ -266,7 +273,7 @@ async function runSkillsInstallForTarget(skills, existingInstalls, target) {
 
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
-  const gitignorePath = resolve(process.cwd(), '.gitignore');
+  const gitignorePath = resolveInstallPath('.gitignore');
   if (!isManageMode && !isInGitignore(gitignorePath, installPath)) {
     shouldGitignore = await promptGitignore(installPath);
   }
@@ -374,7 +381,7 @@ async function runSubagentsInstall() {
  */
 async function runSubagentsInstallForTarget(subagents, existingInstalls, target) {
   const { path: installPath, isExisting } = target;
-  const absoluteInstallPath = resolve(process.cwd(), installPath);
+  const absoluteInstallPath = resolveInstallPath(installPath);
 
   // Get currently installed subagents if managing existing installation
   let installedAgents = [];
@@ -413,7 +420,7 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
 
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
-  const gitignorePath = resolve(process.cwd(), '.gitignore');
+  const gitignorePath = resolveInstallPath('.gitignore');
   if (!isManageMode && !isInGitignore(gitignorePath, installPath)) {
     shouldGitignore = await promptGitignore(installPath);
   }

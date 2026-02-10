@@ -219,18 +219,6 @@ describe('Existing Installation Detection', () => {
     });
   });
 
-  describe('User Story: Detect existing .agents/skills installation', () => {
-    it('should detect installation in .agents/skills/', async () => {
-      const skillsPath = join(tempDir.path, '.agents', 'skills');
-      mkdirSync(skillsPath, { recursive: true });
-      createMockSkillsRepo(skillsPath, ['test-skill']);
-
-      const result = await runCLI(tempDir.path, [], { timeout: 3000 });
-
-      expect(result.stdout).toContain('AI Agent Skills & Subagents Installer');
-    });
-  });
-
   describe('User Story: No existing installation detected', () => {
     it('should proceed with fresh install flow when no existing installation', async () => {
       // Empty directory - no existing installation
@@ -360,22 +348,17 @@ describe('.gitignore Integration', () => {
 describe('Path Selection Options', () => {
   describe('User Story: Choose standard installation paths', () => {
     it('should offer .github/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
+      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.github/skills/');
     });
 
-    it('should offer .agents/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
-      expect(standardPaths).toContain('.agents/skills/');
-    });
-
-    it('should offer /etc/codex/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
-      expect(standardPaths).toContain('/etc/codex/skills/');
+    it('should offer ~/.codex/skills/ as an option', () => {
+      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('~/.codex/skills/');
     });
 
     it('should offer .claude/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '.agents/skills/', '/etc/codex/skills/', '.claude/skills/'];
+      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.claude/skills/');
     });
 
