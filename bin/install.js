@@ -22,8 +22,8 @@ import {
   showSubagentSuccess,
   showError
 } from '../lib/prompts.js';
-import { fetchAvailableSkills } from '../lib/skills.js';
-import { fetchAvailableSubagents } from '../lib/subagents.js';
+import { fetchAvailableSkills, fetchSkillMetadata } from '../lib/skills.js';
+import { fetchAvailableSubagents, fetchSubagentMetadata } from '../lib/subagents.js';
 import { 
   sparseCloneSkills, 
   isGitAvailable, 
@@ -279,7 +279,12 @@ async function runSkillsInstallForTarget(skills, existingInstalls, target) {
   }
 
   // Select skills (pre-select installed skills in manage mode)
-  const selectedSkills = await promptSkillSelection(skills, installedSkills, skillsNeedingUpdate);
+  const selectedSkills = await promptSkillSelection(
+    skills,
+    installedSkills,
+    skillsNeedingUpdate,
+    (skillFolder) => fetchSkillMetadata(skillFolder)
+  );
 
   // Perform installation or update
   console.log('');
@@ -426,7 +431,12 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
   }
 
   // Select subagents (pre-select installed ones in manage mode)
-  const selectedAgents = await promptSubagentSelection(subagents, installedAgents, subagentsNeedingUpdate);
+  const selectedAgents = await promptSubagentSelection(
+    subagents,
+    installedAgents,
+    subagentsNeedingUpdate,
+    (filename) => fetchSubagentMetadata(filename)
+  );
 
   // Perform installation or update
   console.log('');

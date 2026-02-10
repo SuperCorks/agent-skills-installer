@@ -19,8 +19,8 @@ When running the installer, users first choose what to install:
 | Option | Description |
 |--------|-------------|
 | Skills only | Install skills from @supercorks/agent-skills |
-| Subagents only | Install subagents from @supercorks/subagents |
-| Both skills and subagents | Install both resources |
+| Agents only | Install subagents from @supercorks/subagents |
+| Skills and Agents | Install both resources |
 
 ---
 
@@ -94,7 +94,7 @@ The interactive skill picker supports:
 |-----|--------|
 | ↑/↓ | Navigate between skills |
 | Space | Toggle skill selection |
-| → | Expand skill description |
+| → | Expand and lazy-load description |
 | ← | Collapse skill description |
 | A | Toggle all skills |
 | Enter | Confirm selection |
@@ -231,7 +231,7 @@ npx @supercorks/skills-installer --version
 
 ### Interactive Flow
 
-1. **Select installation type** - Choose skills only, subagents only, or both
+1. **Select installation type** - Choose skills only, agents only, or both
 2. **Skills flow** (if selected):
    - Fetch available skills
    - Select installation path
@@ -261,15 +261,16 @@ npx @supercorks/skills-installer --version
 Skills are detected from the repository by:
 1. Listing all directories at the repository root
 2. Filtering out excluded folders (`.github`, `.claude`, `node_modules`, hidden folders)
-3. Checking each directory for a `SKILL.md` file
-4. Parsing frontmatter from `SKILL.md` for name and description
+3. Returning immediate folder-derived display names
+4. Loading and parsing `SKILL.md` frontmatter only when the user expands an item (`→`)
 
 ### Subagent Detection
 
 Subagents are detected from the repository by:
 1. Listing all files at the repository root ending with `.agent.md`
-2. Fetching and parsing the frontmatter from each file
-3. Extracting name and description from YAML frontmatter (supports `---` and ` ```chatagent` formats)
+2. Returning immediate filename-derived display names
+3. Fetching and parsing frontmatter only when the user expands an item (`→`)
+4. Extracting name and description from YAML frontmatter (supports `---` and ` ```chatagent` formats)
 
 ### Sparse Checkout
 

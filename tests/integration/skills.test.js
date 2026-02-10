@@ -10,7 +10,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Now import the module under test
-const { fetchAvailableSkills, getRepoUrl, REPO_OWNER, REPO_NAME } = await import('../../lib/skills.js');
+const { fetchAvailableSkills, fetchSkillMetadata, getRepoUrl, REPO_OWNER, REPO_NAME } = await import('../../lib/skills.js');
 
 describe('Skills Module', () => {
   beforeEach(() => {
@@ -18,7 +18,7 @@ describe('Skills Module', () => {
   });
 
   describe('User Story: Fetch available skills from repository', () => {
-    it('should fetch skills list from GitHub API', async () => {
+    it('should fetch skills list from GitHub API with one request', async () => {
       // Mock root contents response
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -30,42 +30,20 @@ describe('Skills Module', () => {
         ]
       });
 
-      // Mock SKILL.md responses
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          content: Buffer.from(`---
-name: Address PR Comments
-description: Address PR review comments from automated and human reviewers.
----
-# Address PR Comments`).toString('base64')
-        })
-      });
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          content: Buffer.from(`---
-name: GTM Manager
-description: Manage Google Tag Manager containers and tags.
----
-# GTM Manager`).toString('base64')
-        })
-      });
-
       const skills = await fetchAvailableSkills();
 
       expect(skills).toHaveLength(2);
       expect(skills[0]).toEqual({
         folder: 'address-pr-comments',
-        name: 'Address PR Comments',
-        description: 'Address PR review comments from automated and human reviewers.'
+        name: 'Address Pr Comments',
+        description: 'Press right arrow to load description'
       });
       expect(skills[1]).toEqual({
         folder: 'gtm-manager',
-        name: 'GTM Manager',
-        description: 'Manage Google Tag Manager containers and tags.'
+        name: 'Gtm Manager',
+        description: 'Press right arrow to load description'
       });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('should filter out excluded folders (.github, .claude, node_modules)', async () => {
@@ -78,16 +56,6 @@ description: Manage Google Tag Manager containers and tags.
           { name: '.hidden', type: 'dir' },
           { name: 'valid-skill', type: 'dir' }
         ]
-      });
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          content: Buffer.from(`---
-name: Valid Skill
-description: A valid skill
----`).toString('base64')
-        })
       });
 
       const skills = await fetchAvailableSkills();
@@ -107,23 +75,13 @@ description: A valid skill
         ]
       });
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          content: Buffer.from(`---
-name: My Skill
-description: A skill
----`).toString('base64')
-        })
-      });
-
       const skills = await fetchAvailableSkills();
 
       expect(skills).toHaveLength(1);
       expect(skills[0].folder).toBe('my-skill');
     });
 
-    it('should exclude directories without SKILL.md', async () => {
+    it('should include directories and lazy-load metadata later', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => [
@@ -132,37 +90,15 @@ description: A skill
         ]
       });
 
-      // First dir has SKILL.md
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          content: Buffer.from(`---
-name: Has Skill MD
-description: Has a SKILL.md
----`).toString('base64')
-        })
-      });
-
-      // Second dir returns 404 for SKILL.md
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404
-      });
-
       const skills = await fetchAvailableSkills();
 
-      expect(skills).toHaveLength(1);
+      expect(skills).toHaveLength(2);
       expect(skills[0].folder).toBe('has-skill-md');
     });
   });
 
-  describe('User Story: Parse SKILL.md frontmatter', () => {
+  describe('User Story: Parse SKILL.md frontmatter lazily', () => {
     it('should parse standard --- frontmatter', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ name: 'test-skill', type: 'dir' }]
-      });
-
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -176,18 +112,12 @@ Some content here.`).toString('base64')
         })
       });
 
-      const skills = await fetchAvailableSkills();
-
-      expect(skills[0].name).toBe('Test Skill');
-      expect(skills[0].description).toBe('This is a test skill');
+      const metadata = await fetchSkillMetadata('test-skill');
+      expect(metadata.name).toBe('Test Skill');
+      expect(metadata.description).toBe('This is a test skill');
     });
 
     it('should parse ```skill fenced frontmatter', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ name: 'fenced-skill', type: 'dir' }]
-      });
-
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -202,18 +132,12 @@ description: Uses fenced frontmatter
         })
       });
 
-      const skills = await fetchAvailableSkills();
-
-      expect(skills[0].name).toBe('Fenced Skill');
-      expect(skills[0].description).toBe('Uses fenced frontmatter');
+      const metadata = await fetchSkillMetadata('fenced-skill');
+      expect(metadata.name).toBe('Fenced Skill');
+      expect(metadata.description).toBe('Uses fenced frontmatter');
     });
 
     it('should fallback to folder name when no name in frontmatter', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ name: 'unnamed-skill', type: 'dir' }]
-      });
-
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -223,10 +147,9 @@ description: Has description but no name
         })
       });
 
-      const skills = await fetchAvailableSkills();
-
-      // When no name, should use folder name or show no description message
-      expect(skills[0].folder).toBe('unnamed-skill');
+      const metadata = await fetchSkillMetadata('unnamed-skill');
+      expect(metadata.name).toBe('');
+      expect(metadata.description).toBe('Has description but no name');
     });
   });
 

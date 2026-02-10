@@ -109,6 +109,23 @@ describe('Path Selection Options', () => {
       expect(standardPaths).toContain('.claude/skills/');
     });
   });
+
+  describe('User Story: Standard subagent installation paths', () => {
+    it('should include .github/agents as standard option', () => {
+      const standardPaths = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+      expect(standardPaths).toContain('.github/agents/');
+    });
+
+    it('should include .agents/agents as standard option', () => {
+      const standardPaths = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+      expect(standardPaths).toContain('.agents/agents/');
+    });
+
+    it('should include .claude/agents as standard option', () => {
+      const standardPaths = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+      expect(standardPaths).toContain('.claude/agents/');
+    });
+  });
 });
 
 describe('Skill Selection UI Components', () => {
