@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { join, resolve } from 'path';
 import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, mkdtempSync } from 'fs';
-import { tmpdir } from 'os';
+import { tmpdir, homedir } from 'os';
 import { execSync } from 'child_process';
 
 // Import the module under test
@@ -23,6 +23,16 @@ import {
 
 function createTempDir() {
   const path = mkdtempSync(join(tmpdir(), 'git-test-'));
+  return {
+    path,
+    cleanup: () => {
+      try { rmSync(path, { recursive: true, force: true }); } catch {}
+    }
+  };
+}
+
+function createHomeTempDir() {
+  const path = mkdtempSync(join(homedir(), '.skills-installer-test-'));
   return {
     path,
     cleanup: () => {
@@ -153,6 +163,27 @@ describe('List Checked Out Skills', () => {
       const skills = await listCheckedOutSkills(tempDir.path);
 
       expect(skills).toHaveLength(0);
+    });
+  });
+
+  describe('User Story: Resolve home shorthand paths', () => {
+    let homeTempDir;
+
+    beforeEach(() => {
+      homeTempDir = createHomeTempDir();
+    });
+
+    afterEach(() => {
+      homeTempDir?.cleanup();
+    });
+
+    it('should resolve ~/ paths when listing checked out skills', async () => {
+      createMockGitRepo(homeTempDir.path, ['tilde-skill']);
+
+      const relativeToHome = homeTempDir.path.replace(`${homedir()}/`, '~/');
+      const skills = await listCheckedOutSkills(relativeToHome);
+
+      expect(skills).toContain('tilde-skill');
     });
   });
 });
