@@ -27,7 +27,7 @@ npx @supercorks/skills-installer install
    - `.claude/agents/` (Claude)
    - Custom path of your choice
 
-3. **Gitignore option** - Optionally add the installation path to `.gitignore`
+3. **Gitignore option** - If launched from inside a git repository, optionally add the installation path to `.gitignore`
 
 4. **Select skills/subagents** - Interactive checkbox to pick what to install:
    - Use `↑`/`↓` to navigate

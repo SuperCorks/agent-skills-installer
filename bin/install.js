@@ -27,6 +27,7 @@ import { fetchAvailableSubagents, fetchSubagentMetadata } from '../lib/subagents
 import { 
   sparseCloneSkills, 
   isGitAvailable, 
+  isInsideGitWorkTree,
   listCheckedOutSkills, 
   updateSparseCheckout,
   sparseCloneSubagents,
@@ -279,8 +280,14 @@ async function runSkillsInstallForTarget(skills, existingInstalls, target) {
 
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
+  const isInGitWorkTree = isInsideGitWorkTree();
   const gitignorePath = resolveInstallPath('.gitignore');
-  if (!isManageMode && !isHomePath(installPath) && !isInGitignore(gitignorePath, installPath)) {
+  if (
+    isInGitWorkTree &&
+    !isManageMode &&
+    !isHomePath(installPath) &&
+    !isInGitignore(gitignorePath, installPath)
+  ) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
@@ -433,8 +440,14 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
 
   // Ask about .gitignore (only for fresh installs and if not already in .gitignore)
   let shouldGitignore = false;
+  const isInGitWorkTree = isInsideGitWorkTree();
   const gitignorePath = resolveInstallPath('.gitignore');
-  if (!isManageMode && !isHomePath(installPath) && !isInGitignore(gitignorePath, installPath)) {
+  if (
+    isInGitWorkTree &&
+    !isManageMode &&
+    !isHomePath(installPath) &&
+    !isInGitignore(gitignorePath, installPath)
+  ) {
     shouldGitignore = await promptGitignore(installPath);
   }
 

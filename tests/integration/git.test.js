@@ -12,6 +12,7 @@ import { execSync } from 'child_process';
 // Import the module under test
 import {
   isGitAvailable,
+  isInsideGitWorkTree,
   listCheckedOutSkills,
   checkSkillsForUpdates,
   checkSubagentsForUpdates,
@@ -79,6 +80,43 @@ describe('Git Availability', () => {
     it('should return true when git is available', () => {
       // Assuming git is installed in test environment
       const result = isGitAvailable();
+      expect(result).toBe(true);
+    });
+  });
+});
+
+// ============================================================================
+// Git Work Tree Detection Tests
+// ============================================================================
+
+describe('Git Work Tree Detection', () => {
+  let tempDir;
+
+  beforeEach(() => {
+    tempDir = createTempDir();
+  });
+
+  afterEach(() => {
+    tempDir?.cleanup();
+  });
+
+  describe('User Story: Detect whether current directory is in a git repository', () => {
+    it('should return false when path is not in a git repository', () => {
+      const result = isInsideGitWorkTree(tempDir.path);
+      expect(result).toBe(false);
+    });
+
+    it('should return true for a git repository root', () => {
+      execSync('git init', { cwd: tempDir.path, stdio: 'ignore' });
+      const result = isInsideGitWorkTree(tempDir.path);
+      expect(result).toBe(true);
+    });
+
+    it('should return true for a nested directory within a git repository', () => {
+      execSync('git init', { cwd: tempDir.path, stdio: 'ignore' });
+      const nested = join(tempDir.path, 'nested', 'child');
+      mkdirSync(nested, { recursive: true });
+      const result = isInsideGitWorkTree(nested);
       expect(result).toBe(true);
     });
   });

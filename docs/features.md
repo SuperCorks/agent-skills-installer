@@ -108,7 +108,7 @@ Display format:
 
 ### .gitignore Integration
 
-For fresh installations, users are prompted:
+For fresh installations launched inside a git repository, users are prompted:
 ```
 ? Add ".github/skills/" to .gitignore? (Y/n)
 ```
