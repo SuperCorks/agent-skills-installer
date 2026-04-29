@@ -1,6 +1,6 @@
 # @supercorks/skills-installer
 
-Interactive CLI installer for AI agent skills and subagents. Selectively install resources for GitHub Copilot, Codex, Claude, and other AI assistants using Git sparse-checkout.
+Interactive CLI installer for AI agent skills and subagents. Selectively install resources for GitHub Copilot, Codex, Claude, and other AI assistants using Git sparse-checkout and Codex agent conversion where needed.
 
 ## Usage
 
@@ -18,13 +18,23 @@ npx @supercorks/skills-installer install
 
 1. **Choose installation type** - Install skills, subagents, or both.
 
-2. **Choose installation path(s)** - Select one or more locations where resources should be installed:
-   - `.github/skills/` (Copilot)
-   - `~/.codex/skills/` (Codex)
-   - `.claude/skills/` (Claude)
-   - `.github/agents/` (Copilot)
-   - `.agents/agents/` (Codex)
-   - `.claude/agents/` (Claude)
+2. **Choose installation path(s)** - Select one or more locations where resources should be installed. The installer labels each option with harness, scope, and available count, for example `.github/skills/ (copilot | local | 21 skills)`.
+
+   Skills:
+   - `.github/skills/` (copilot | local)
+   - `~/.copilot/skills/` (copilot | global)
+   - `.agents/skills/` (codex | local)
+   - `~/.agents/skills/` (codex | global)
+   - `.claude/skills/` (claude | local)
+   - `~/.claude/skills/` (claude | global)
+
+   Agents:
+   - `.github/agents/` (copilot | local)
+   - `~/.copilot/agents/` (copilot | global)
+   - `.claude/agents/` (claude | local)
+   - `~/.claude/agents/` (claude | global)
+   - `.codex/agents/` (codex | local, installed as converted TOML agents)
+   - `~/.codex/agents/` (codex | global, installed as converted TOML agents)
    - Custom path of your choice
 
 3. **Gitignore option** - If launched from inside a git repository, optionally add the installation path to `.gitignore`
@@ -36,7 +46,9 @@ npx @supercorks/skills-installer install
    - Use `A` to toggle all
    - Press `ENTER` to confirm
 
-5. **Sparse clone** - Only downloads selected skills/subagents using Git sparse-checkout, keeping the download minimal while preserving full git functionality.
+5. **Install backend**
+   - Skills and Markdown-based agents use Git sparse-checkout for minimal download while preserving full git functionality.
+   - Codex agents are generated as TOML files from the source Markdown agent definitions.
 
 ## Installed repositories
 
@@ -48,6 +60,8 @@ npx @supercorks/skills-installer install
 - **Minimal download** - Uses `git clone --filter=blob:none` for efficient cloning
 - **Push capable** - The sparse clone preserves the full git history, allowing you to commit and push changes
 - **Auto-discovery** - Fetches the latest skill list from the repository
+- **Global and local targets** - Offers documented project/user locations for Copilot, Codex, and Claude where the resource format is compatible
+- **Codex agent conversion** - Converts Markdown subagents into Codex TOML custom agents for `.codex/agents/` targets
 - **Recursive directory creation** - Custom paths are created automatically
 
 ## Requirements

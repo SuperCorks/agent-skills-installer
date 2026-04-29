@@ -58,31 +58,44 @@ When running in a directory with existing installations, users can modify their 
 
 Users can install skills to:
 
-| Option | Path | Description |
-|--------|------|-------------|
-| GitHub Skills | `.github/skills/` (Copilot) | Standard location for GitHub-aware tools |
-| Codex Home Skills | `~/.codex/skills/` (Codex) | User-level Codex skills location |
-| Claude Skills | `.claude/skills/` (Claude) | Standard location for Claude/Anthropic tools |
-| Custom | User-defined | Any custom path |
+| Harness | Scope | Path | Description |
+|---------|-------|------|-------------|
+| Copilot | Local | `.github/skills/` | Workspace/project skills |
+| Copilot | Global | `~/.copilot/skills/` | Personal skills available across workspaces |
+| Codex | Local | `.agents/skills/` | Repository skills discovered from the current directory up to the repo root |
+| Codex | Global | `~/.agents/skills/` | User skills available across repositories |
+| Claude | Local | `.claude/skills/` | Project skills |
+| Claude | Global | `~/.claude/skills/` | Personal skills available across projects |
+| Custom | Custom | User-defined | Any custom path |
+
+Legacy installs at `~/.codex/skills/` are still detected so users can manage or migrate them, but new Codex installs use the current documented `~/.agents/skills/` path.
 
 #### Subagents Installation Paths
 
 Users can install subagents to:
 
-| Option | Path | Description |
-|--------|------|-------------|
-| GitHub Agents | `.github/agents/` (Copilot) | Standard location for GitHub Copilot custom agents |
-| Codex Agents | `.agents/agents/` (Codex) | Standard location for Codex project agents |
-| Claude Agents | `.claude/agents/` (Claude) | Standard location for Claude Code subagents |
-| Custom | User-defined | Any custom path |
+| Harness | Scope | Path | Description |
+|---------|-------|------|-------------|
+| Copilot | Local | `.github/agents/` | Workspace custom agents |
+| Copilot | Global | `~/.copilot/agents/` | Personal custom agents available across workspaces |
+| Claude | Local | `.claude/agents/` | Project subagents |
+| Claude | Global | `~/.claude/agents/` | Personal subagents available across projects |
+| Codex | Local | `.codex/agents/` | Generated Codex TOML custom agents |
+| Codex | Global | `~/.codex/agents/` | Generated Codex TOML custom agents |
+| Custom | Custom | User-defined | Any custom path |
+
+Codex custom agents are documented as TOML files under `.codex/agents/` or `~/.codex/agents/`. The installer converts the source Markdown `.agent.md` files into Codex TOML files on install. The initial converter maps `name`, `description`, and the Markdown body to `developer_instructions`; tool, model, and MCP-specific frontmatter are intentionally ignored for now. Legacy `.agents/agents/` installs are still detected for management.
 
 When existing installations are detected, they appear at the top of the list with counts:
 ```
 ? Select one or more installations to manage, or choose new locations:
-❯ .github/skills/ (2 skills installed)
+❯ .github/skills/ (copilot | local | 2 skills installed)
   ── New installation ──
-  ~/.codex/skills/ (Codex)
-  .claude/skills/ (Claude)
+   ~/.copilot/skills/ (copilot | global | 21 skills)
+   .agents/skills/ (codex | local | 21 skills)
+   ~/.agents/skills/ (codex | global | 21 skills)
+   .claude/skills/ (claude | local | 21 skills)
+   ~/.claude/skills/ (claude | global | 21 skills)
   Custom path...
 ```
 

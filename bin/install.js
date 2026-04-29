@@ -37,13 +37,15 @@ import {
   checkSubagentsForUpdates
 } from '../lib/git.js';
 import { createRequire } from 'module';
+import { allAgentDetectionTargets, allSkillDetectionTargets, getAgentInstallMode } from '../lib/install-targets.js';
+import { checkCodexAgentUpdates, listInstalledCodexAgents, syncCodexAgents } from '../lib/codex-agents.js';
 
 const require = createRequire(import.meta.url);
 const { version: VERSION } = require('../package.json');
 
 // Common installation paths to check for existing installations
-const SKILL_PATHS = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
-const AGENT_PATHS = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+const SKILL_PATHS = allSkillDetectionTargets().map(target => target.path);
+const AGENT_PATHS = allAgentDetectionTargets().map(target => target.path);
 
 function resolveInstallPath(path) {
   if (path === '~') return homedir();
@@ -92,6 +94,24 @@ async function detectExistingAgentInstallations() {
   
   for (const path of AGENT_PATHS) {
     const absolutePath = resolveInstallPath(path);
+    const installMode = getAgentInstallMode(path);
+
+    if (installMode === 'codex-toml') {
+      try {
+        const agents = await listInstalledCodexAgents(absolutePath);
+        if (agents.length > 0) {
+          installations.push({
+            path,
+            agentCount: agents.length,
+            agents
+          });
+        }
+      } catch {
+        // Ignore errors reading existing installations
+      }
+      continue;
+    }
+
     const gitDir = join(absolutePath, '.git');
     
     if (existsSync(gitDir)) {
@@ -220,7 +240,7 @@ async function runSkillsInstall() {
   const existingInstalls = await detectExistingSkillInstallations();
 
   // Ask where to install (showing existing installations if any)
-  const installTargets = await promptInstallPath(existingInstalls);
+  const installTargets = await promptInstallPath(existingInstalls, skills.length);
 
   for (let i = 0; i < installTargets.length; i++) {
     const target = installTargets[i];
@@ -380,7 +400,7 @@ async function runSubagentsInstall() {
   const existingInstalls = await detectExistingAgentInstallations();
 
   // Ask where to install (showing existing installations if any)
-  const installTargets = await promptAgentInstallPath(existingInstalls);
+  const installTargets = await promptAgentInstallPath(existingInstalls, subagents.length);
 
   for (let i = 0; i < installTargets.length; i++) {
     const target = installTargets[i];
@@ -400,15 +420,16 @@ async function runSubagentsInstall() {
 async function runSubagentsInstallForTarget(subagents, existingInstalls, target) {
   const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolveInstallPath(installPath);
+  const installMode = getAgentInstallMode(installPath);
   const gitDir = join(absoluteInstallPath, '.git');
-  const hasExistingRepo = existsSync(gitDir);
+  const hasExistingRepo = installMode === 'sparse-git' && existsSync(gitDir);
 
   // Get currently installed subagents if managing existing installation
   let installedAgents = [];
   if (isExisting) {
     const existingInstall = existingInstalls.find(i => i.path === installPath);
     installedAgents = existingInstall?.agents || [];
-  } else {
+  } else if (installMode === 'sparse-git') {
     // Check if manually entered path has an existing installation
     if (hasExistingRepo) {
       try {
@@ -418,16 +439,27 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
         // Prompt will default to selecting all subagents.
       }
     }
+  } else {
+    try {
+      installedAgents = await listInstalledCodexAgents(absoluteInstallPath);
+    } catch {
+      // Ignore detection failures for custom Codex agent paths.
+    }
   }
 
-  const isManageMode = isExisting || hasExistingRepo || installedAgents.length > 0;
+  const isManageMode = installMode === 'sparse-git'
+    ? (isExisting || hasExistingRepo || installedAgents.length > 0)
+    : installedAgents.length > 0;
 
   // Check for updates if in manage mode
   let subagentsNeedingUpdate = new Set();
   if (isManageMode) {
     const updateSpinner = showSpinner('Checking for available updates...');
     try {
-      subagentsNeedingUpdate = await checkSubagentsForUpdates(absoluteInstallPath, installedAgents);
+      subagentsNeedingUpdate = installMode === 'sparse-git'
+        ? await checkSubagentsForUpdates(absoluteInstallPath, installedAgents)
+        : await checkCodexAgentUpdates(absoluteInstallPath, installedAgents);
+
       if (subagentsNeedingUpdate.size > 0) {
         updateSpinner.stop(`✅ Found ${subagentsNeedingUpdate.size} subagent${subagentsNeedingUpdate.size !== 1 ? 's' : ''} with updates available`);
       } else {
@@ -475,9 +507,15 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
     const updateSpinner = showSpinner('Updating subagents installation...');
     
     try {
-      await updateSubagentsSparseCheckout(absoluteInstallPath, selectedAgents, (message) => {
-        updateSpinner.stop(`   ${message}`);
-      });
+      if (installMode === 'sparse-git') {
+        await updateSubagentsSparseCheckout(absoluteInstallPath, selectedAgents, (message) => {
+          updateSpinner.stop(`   ${message}`);
+        });
+      } else {
+        await syncCodexAgents(absoluteInstallPath, selectedAgents, (message) => {
+          updateSpinner.stop(`   ${message}`);
+        });
+      }
     } catch (error) {
       updateSpinner.stop('❌ Update failed');
       showError(error.message);
@@ -490,9 +528,15 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
     const installSpinner = showSpinner('Installing selected subagents...');
     
     try {
-      await sparseCloneSubagents(installPath, selectedAgents, (message) => {
-        installSpinner.stop(`   ${message}`);
-      });
+      if (installMode === 'sparse-git') {
+        await sparseCloneSubagents(installPath, selectedAgents, (message) => {
+          installSpinner.stop(`   ${message}`);
+        });
+      } else {
+        await syncCodexAgents(absoluteInstallPath, selectedAgents, (message) => {
+          installSpinner.stop(`   ${message}`);
+        });
+      }
     } catch (error) {
       installSpinner.stop('❌ Installation failed');
       showError(error.message);

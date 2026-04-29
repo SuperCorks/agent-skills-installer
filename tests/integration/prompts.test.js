@@ -93,37 +93,84 @@ describe('Prompts Module Utilities', () => {
 
 describe('Path Selection Options', () => {
   describe('User Story: Standard installation paths', () => {
-    it('should include .github/skills as standard option', () => {
-      // Based on prompts.js PATH_CHOICES
-      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
+    it('should include local and global skill targets for each harness', async () => {
+      const { SKILL_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
+      const standardPaths = SKILL_INSTALL_TARGETS.map(target => target.path);
+
       expect(standardPaths).toContain('.github/skills/');
-    });
-
-    it('should include ~/.codex/skills as standard option', () => {
-      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
-      expect(standardPaths).toContain('~/.codex/skills/');
-    });
-
-    it('should include .claude/skills as standard option', () => {
-      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('~/.copilot/skills/');
+      expect(standardPaths).toContain('.agents/skills/');
+      expect(standardPaths).toContain('~/.agents/skills/');
       expect(standardPaths).toContain('.claude/skills/');
+      expect(standardPaths).toContain('~/.claude/skills/');
+    });
+
+    it('should detect legacy Codex skill target without recommending it', async () => {
+      const { LEGACY_SKILL_INSTALL_TARGETS, SKILL_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
+
+      expect(LEGACY_SKILL_INSTALL_TARGETS.map(target => target.path)).toContain('~/.codex/skills/');
+      expect(SKILL_INSTALL_TARGETS.map(target => target.path)).not.toContain('~/.codex/skills/');
     });
   });
 
   describe('User Story: Standard subagent installation paths', () => {
-    it('should include .github/agents as standard option', () => {
-      const standardPaths = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+    it('should include local and global agent targets for each supported harness', async () => {
+      const { AGENT_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
+      const standardPaths = AGENT_INSTALL_TARGETS.map(target => target.path);
+
       expect(standardPaths).toContain('.github/agents/');
-    });
-
-    it('should include .agents/agents as standard option', () => {
-      const standardPaths = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
-      expect(standardPaths).toContain('.agents/agents/');
-    });
-
-    it('should include .claude/agents as standard option', () => {
-      const standardPaths = ['.github/agents/', '.agents/agents/', '.claude/agents/'];
+      expect(standardPaths).toContain('~/.copilot/agents/');
       expect(standardPaths).toContain('.claude/agents/');
+      expect(standardPaths).toContain('~/.claude/agents/');
+      expect(standardPaths).toContain('.codex/agents/');
+      expect(standardPaths).toContain('~/.codex/agents/');
+    });
+
+    it('should mark Codex agent targets for TOML conversion installs', async () => {
+      const { AGENT_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
+      const codexTargets = AGENT_INSTALL_TARGETS.filter(target => target.harness === 'codex');
+
+      expect(codexTargets.map(target => target.path)).toEqual(['.codex/agents/', '~/.codex/agents/']);
+      expect(codexTargets.every(target => target.installMode === 'codex-toml')).toBe(true);
+    });
+
+    it('should detect legacy agent target without recommending it', async () => {
+      const { LEGACY_AGENT_INSTALL_TARGETS, AGENT_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
+
+      expect(LEGACY_AGENT_INSTALL_TARGETS.map(target => target.path)).toContain('.agents/agents/');
+      expect(AGENT_INSTALL_TARGETS.map(target => target.path)).not.toContain('.agents/agents/');
+    });
+
+    it('should detect Codex TOML agent targets for generated installs', async () => {
+      const { allAgentDetectionTargets } = await import('../../lib/install-targets.js');
+      const detectionPaths = allAgentDetectionTargets().map(target => target.path);
+
+      expect(detectionPaths).toContain('.codex/agents/');
+      expect(detectionPaths).toContain('~/.codex/agents/');
+    });
+
+    it('should resolve Codex agent paths to the conversion backend', async () => {
+      const { getAgentInstallMode } = await import('../../lib/install-targets.js');
+
+      expect(getAgentInstallMode('.codex/agents/')).toBe('codex-toml');
+      expect(getAgentInstallMode('~/.codex/agents/')).toBe('codex-toml');
+      expect(getAgentInstallMode('.github/agents/')).toBe('sparse-git');
+    });
+  });
+
+  describe('User Story: See harness scope and count in path labels', () => {
+    it('should format new target labels with harness scope and available count', async () => {
+      const { formatTargetLabel } = await import('../../lib/install-targets.js');
+      const target = { path: '.github/skills/', harness: 'copilot', scope: 'local' };
+
+      expect(formatTargetLabel(target, 21, 'skill')).toBe('.github/skills/ (copilot | local | 21 skills)');
+    });
+
+    it('should format existing target labels with installed count', async () => {
+      const { formatTargetLabel } = await import('../../lib/install-targets.js');
+      const target = { path: '~/.claude/agents/', harness: 'claude', scope: 'global' };
+
+      expect(formatTargetLabel(target, 1, 'agent', { installed: true })).toBe('~/.claude/agents/ (claude | global | 1 agent installed)');
     });
   });
 });
