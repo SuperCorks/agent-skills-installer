@@ -57,6 +57,14 @@ function isHomePath(path) {
   return path === '~' || path.startsWith('~/');
 }
 
+function uniqueItems(items) {
+  return Array.from(new Set(items));
+}
+
+function unionSets(sets) {
+  return new Set(sets.flatMap(set => Array.from(set)));
+}
+
 /**
  * Detect existing skill installations in common paths
  * @returns {Promise<Array<{path: string, skillCount: number, skills: string[]}>>}
@@ -242,22 +250,39 @@ async function runSkillsInstall() {
   // Ask where to install (showing existing installations if any)
   const installTargets = await promptInstallPath(existingInstalls, skills.length);
 
-  for (let i = 0; i < installTargets.length; i++) {
-    const target = installTargets[i];
+  const targetContexts = [];
+  for (const [index, target] of installTargets.entries()) {
     if (installTargets.length > 1) {
-      console.log(`\n📍 Skills target ${i + 1}/${installTargets.length}: ${target.path}`);
+      console.log(`\n📍 Preparing skills target ${index + 1}/${installTargets.length}: ${target.path}`);
     }
-    await runSkillsInstallForTarget(skills, existingInstalls, target);
+    targetContexts.push(await prepareSkillsInstallTarget(existingInstalls, target));
+  }
+
+  const installedSkills = uniqueItems(targetContexts.flatMap(context => context.installedSkills));
+  const skillsNeedingUpdate = unionSets(targetContexts.map(context => context.skillsNeedingUpdate));
+
+  const selectedSkills = await promptSkillSelection(
+    skills,
+    installedSkills,
+    skillsNeedingUpdate,
+    (skillFolder) => fetchSkillMetadata(skillFolder)
+  );
+
+  for (let i = 0; i < targetContexts.length; i++) {
+    if (targetContexts.length > 1) {
+      console.log(`\n📍 Skills target ${i + 1}/${targetContexts.length}: ${targetContexts[i].installPath}`);
+    }
+    await runSkillsInstallForTarget(skills, targetContexts[i], selectedSkills);
   }
 }
 
 /**
- * Install/update skills for a specific target path
- * @param {Array<{name: string, description: string, folder: string}>} skills
+ * Prepare a specific skills target for installation/update.
  * @param {Array<{path: string, skillCount: number, skills: string[]}>} existingInstalls
  * @param {{path: string, isExisting: boolean}} target
+ * @returns {Promise<object>}
  */
-async function runSkillsInstallForTarget(skills, existingInstalls, target) {
+async function prepareSkillsInstallTarget(existingInstalls, target) {
   const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolveInstallPath(installPath);
   const gitDir = join(absoluteInstallPath, '.git');
@@ -311,13 +336,33 @@ async function runSkillsInstallForTarget(skills, existingInstalls, target) {
     shouldGitignore = await promptGitignore(installPath);
   }
 
-  // Select skills (pre-select installed skills in manage mode)
-  const selectedSkills = await promptSkillSelection(
-    skills,
+  return {
+    ...target,
+    installPath,
+    absoluteInstallPath,
     installedSkills,
-    skillsNeedingUpdate,
-    (skillFolder) => fetchSkillMetadata(skillFolder)
-  );
+    isManageMode,
+    shouldGitignore,
+    gitignorePath,
+    skillsNeedingUpdate
+  };
+}
+
+/**
+ * Install/update skills for a specific target path
+ * @param {Array<{name: string, description: string, folder: string}>} skills
+ * @param {object} targetContext
+ * @param {string[]} selectedSkills
+ */
+async function runSkillsInstallForTarget(skills, targetContext, selectedSkills) {
+  const {
+    installPath,
+    absoluteInstallPath,
+    installedSkills,
+    isManageMode,
+    shouldGitignore,
+    gitignorePath
+  } = targetContext;
 
   // Perform installation or update
   console.log('');
@@ -402,22 +447,39 @@ async function runSubagentsInstall() {
   // Ask where to install (showing existing installations if any)
   const installTargets = await promptAgentInstallPath(existingInstalls, subagents.length);
 
-  for (let i = 0; i < installTargets.length; i++) {
-    const target = installTargets[i];
+  const targetContexts = [];
+  for (const [index, target] of installTargets.entries()) {
     if (installTargets.length > 1) {
-      console.log(`\n📍 Subagents target ${i + 1}/${installTargets.length}: ${target.path}`);
+      console.log(`\n📍 Preparing subagents target ${index + 1}/${installTargets.length}: ${target.path}`);
     }
-    await runSubagentsInstallForTarget(subagents, existingInstalls, target);
+    targetContexts.push(await prepareSubagentsInstallTarget(existingInstalls, target));
+  }
+
+  const installedAgents = uniqueItems(targetContexts.flatMap(context => context.installedAgents));
+  const subagentsNeedingUpdate = unionSets(targetContexts.map(context => context.subagentsNeedingUpdate));
+
+  const selectedAgents = await promptSubagentSelection(
+    subagents,
+    installedAgents,
+    subagentsNeedingUpdate,
+    (filename) => fetchSubagentMetadata(filename)
+  );
+
+  for (let i = 0; i < targetContexts.length; i++) {
+    if (targetContexts.length > 1) {
+      console.log(`\n📍 Subagents target ${i + 1}/${targetContexts.length}: ${targetContexts[i].installPath}`);
+    }
+    await runSubagentsInstallForTarget(subagents, targetContexts[i], selectedAgents);
   }
 }
 
 /**
- * Install/update subagents for a specific target path
- * @param {Array<{name: string, description: string, filename: string}>} subagents
+ * Prepare a specific subagent target for installation/update.
  * @param {Array<{path: string, agentCount: number, agents: string[]}>} existingInstalls
  * @param {{path: string, isExisting: boolean}} target
+ * @returns {Promise<object>}
  */
-async function runSubagentsInstallForTarget(subagents, existingInstalls, target) {
+async function prepareSubagentsInstallTarget(existingInstalls, target) {
   const { path: installPath, isExisting } = target;
   const absoluteInstallPath = resolveInstallPath(installPath);
   const installMode = getAgentInstallMode(installPath);
@@ -483,13 +545,35 @@ async function runSubagentsInstallForTarget(subagents, existingInstalls, target)
     shouldGitignore = await promptGitignore(installPath);
   }
 
-  // Select subagents (pre-select installed ones in manage mode)
-  const selectedAgents = await promptSubagentSelection(
-    subagents,
+  return {
+    ...target,
+    installPath,
+    absoluteInstallPath,
+    installMode,
     installedAgents,
-    subagentsNeedingUpdate,
-    (filename) => fetchSubagentMetadata(filename)
-  );
+    isManageMode,
+    shouldGitignore,
+    gitignorePath,
+    subagentsNeedingUpdate
+  };
+}
+
+/**
+ * Install/update subagents for a specific target path
+ * @param {Array<{name: string, description: string, filename: string}>} subagents
+ * @param {object} targetContext
+ * @param {string[]} selectedAgents
+ */
+async function runSubagentsInstallForTarget(subagents, targetContext, selectedAgents) {
+  const {
+    installPath,
+    absoluteInstallPath,
+    installMode,
+    installedAgents,
+    isManageMode,
+    shouldGitignore,
+    gitignorePath
+  } = targetContext;
 
   // Perform installation or update
   console.log('');

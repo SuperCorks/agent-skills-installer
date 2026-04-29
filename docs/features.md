@@ -33,16 +33,16 @@ When no existing installation is detected, users go through the full installatio
 1. **Fetch available skills** - Retrieves the list of skills from the GitHub repository
 2. **Select installation path(s)** - Choose one or more locations to install skills
 3. **Configure .gitignore** - Option to exclude skills from version control
-4. **Select skills** - Interactive skill picker
-5. **Clone and checkout** - Performs sparse clone with selected skills
+4. **Select skills** - Interactive skill picker, shown once even when multiple paths were selected
+5. **Clone and checkout** - Performs sparse clone with selected skills in each selected path
 
 ### Manage Existing Installation
 
 When running in a directory with existing installations, users can modify their skill selection:
 
 1. **Detect existing installations** - Scans common paths for existing skill repos
-2. **Select installation(s) to manage** - Shows existing installations with skill counts
-3. **Modify skill selection** - Pre-selected checkboxes for installed skills
+2. **Select installation(s) to manage** - Shows standard global paths first, then standard local paths, then any legacy/custom existing installations with counts
+3. **Modify skill selection** - Pre-selected checkboxes for the union of installed skills across selected paths
 4. **Apply changes** - Updates sparse-checkout configuration
    - Adds newly selected skills
    - Removes unchecked skills
@@ -60,15 +60,13 @@ Users can install skills to:
 
 | Harness | Scope | Path | Description |
 |---------|-------|------|-------------|
-| Copilot | Local | `.github/skills/` | Workspace/project skills |
-| Copilot | Global | `~/.copilot/skills/` | Personal skills available across workspaces |
-| Codex | Local | `.agents/skills/` | Repository skills discovered from the current directory up to the repo root |
-| Codex | Global | `~/.agents/skills/` | User skills available across repositories |
-| Claude | Local | `.claude/skills/` | Project skills |
+| Copilot/Codex | Global | `~/.agents/skills/` | Shared user skills available across repositories/workspaces |
 | Claude | Global | `~/.claude/skills/` | Personal skills available across projects |
+| Copilot/Codex | Local | `.agents/skills/` | Repository/workspace skills |
+| Claude | Local | `.claude/skills/` | Project skills |
 | Custom | Custom | User-defined | Any custom path |
 
-Legacy installs at `~/.codex/skills/` are still detected so users can manage or migrate them, but new Codex installs use the current documented `~/.agents/skills/` path.
+Legacy installs at `.github/skills/`, `~/.copilot/skills/`, and `~/.codex/skills/` are still detected so users can manage or migrate them, but new Copilot/Codex installs use the shared generic `.agents/skills/` and `~/.agents/skills/` paths.
 
 #### Subagents Installation Paths
 
@@ -76,26 +74,25 @@ Users can install subagents to:
 
 | Harness | Scope | Path | Description |
 |---------|-------|------|-------------|
-| Copilot | Local | `.github/agents/` | Workspace custom agents |
-| Copilot | Global | `~/.copilot/agents/` | Personal custom agents available across workspaces |
-| Claude | Local | `.claude/agents/` | Project subagents |
+| Copilot | Global | `~/.agents/agents/` | Personal custom agents available across workspaces |
 | Claude | Global | `~/.claude/agents/` | Personal subagents available across projects |
-| Codex | Local | `.codex/agents/` | Generated Codex TOML custom agents |
 | Codex | Global | `~/.codex/agents/` | Generated Codex TOML custom agents |
+| Copilot | Local | `.agents/agents/` | Workspace custom agents |
+| Claude | Local | `.claude/agents/` | Project subagents |
+| Codex | Local | `.codex/agents/` | Generated Codex TOML custom agents |
 | Custom | Custom | User-defined | Any custom path |
 
-Codex custom agents are documented as TOML files under `.codex/agents/` or `~/.codex/agents/`. The installer converts the source Markdown `.agent.md` files into Codex TOML files on install. The initial converter maps `name`, `description`, and the Markdown body to `developer_instructions`; tool, model, and MCP-specific frontmatter are intentionally ignored for now. Legacy `.agents/agents/` installs are still detected for management.
+Codex custom agents are documented as TOML files under `.codex/agents/` or `~/.codex/agents/`. The installer converts the source Markdown `.agent.md` files into Codex TOML files on install. The initial converter maps `name`, `description`, and the Markdown body to `developer_instructions`; tool, model, and MCP-specific frontmatter are intentionally ignored for now. Legacy `.github/agents/` and `~/.copilot/agents/` installs are still detected for management.
 
-When existing installations are detected, they appear at the top of the list with counts:
+When existing installations are detected, standard locations stay in global-first order and show installed counts. Legacy/custom installs appear in a separate section:
 ```
 ? Select one or more installations to manage, or choose new locations:
-❯ .github/skills/ (copilot | local | 2 skills installed)
-  ── New installation ──
-   ~/.copilot/skills/ (copilot | global | 24 skills)
-   .agents/skills/ (codex | local | 24 skills)
-   ~/.agents/skills/ (codex | global | 24 skills)
-   .claude/skills/ (claude | local | 24 skills)
+❯ ~/.agents/skills/ (copilot/codex | global | 24 skills)
    ~/.claude/skills/ (claude | global | 24 skills)
+   .agents/skills/ (copilot/codex | local | 2 skills installed)
+   .claude/skills/ (claude | local | 24 skills)
+   ── Existing legacy/custom installations ──
+   .github/skills/ (copilot | legacy local | 2 skills installed)
   Custom path...
 ```
 
@@ -123,7 +120,7 @@ Display format:
 
 For fresh installations launched inside a git repository, users are prompted:
 ```
-? Add ".github/skills/" to .gitignore? (Y/n)
+? Add ".agents/skills/" to .gitignore? (Y/n)
 ```
 
 This prevents the cloned skills from being committed to the user's repository while keeping them available locally.
@@ -139,7 +136,7 @@ This prevents the cloned skills from being committed to the user's repository wh
 ✅ Skills installed successfully!
 ══════════════════════════════════════════════════
 
-📁 Location: .github/skills/
+📁 Location: .agents/skills/
 
 📦 Installed skills (2):
    • Address PR Comments
@@ -156,7 +153,7 @@ This prevents the cloned skills from being committed to the user's repository wh
 ✅ Subagents installed successfully!
 ══════════════════════════════════════════════════
 
-📁 Location: .github/agents/
+📁 Location: .agents/agents/
 
 🤖 Installed subagents (3):
    • Developer
@@ -174,7 +171,7 @@ This prevents the cloned skills from being committed to the user's repository wh
 ✅ Skills updated successfully!
 ══════════════════════════════════════════════════
 
-📁 Location: .github/skills/
+📁 Location: .agents/skills/
 
 ➕ Added (1):
    • GTM Manager
@@ -196,7 +193,7 @@ This prevents the cloned skills from being committed to the user's repository wh
 ✅ Subagents updated successfully!
 ══════════════════════════════════════════════════
 
-📁 Location: .github/agents/
+📁 Location: .agents/agents/
 
 ➕ Added (1):
    • Tester
@@ -247,16 +244,16 @@ npx @supercorks/skills-installer --version
 1. **Select installation type** - Choose skills only, agents only, or both
 2. **Skills flow** (if selected):
    - Fetch available skills
-   - Select installation path
+   - Select one or more installation paths
    - Configure .gitignore (fresh install only)
-   - Select skills
-   - Clone and checkout
+   - Select skills once
+   - Clone and checkout the selected skills into each selected path
 3. **Subagents flow** (if selected):
    - Fetch available subagents
-   - Select installation path
+   - Select one or more installation paths
    - Configure .gitignore (fresh install only)
-   - Select subagents
-   - Clone and checkout Markdown agents, or convert selected agents to Codex TOML for Codex targets
+   - Select subagents once
+   - Clone and checkout Markdown agents, or convert selected agents to Codex TOML for Codex targets, in each selected path
 
 ### Exit Codes
 
@@ -301,22 +298,23 @@ For Codex agent targets, the installer fetches selected Markdown `.agent.md` sou
 ### Existing Installation Detection
 
 **Skills** - Scans these common paths for `.git` directories:
-- `.github/skills/` (Copilot local)
-- `~/.copilot/skills/` (Copilot global)
-- `.agents/skills/` (Codex local)
-- `~/.agents/skills/` (Codex global)
-- `.claude/skills/` (Claude local)
+- `~/.agents/skills/` (Copilot/Codex global)
 - `~/.claude/skills/` (Claude global)
+- `.agents/skills/` (Copilot/Codex local)
+- `.claude/skills/` (Claude local)
+- `.github/skills/` (legacy Copilot local)
+- `~/.copilot/skills/` (legacy Copilot global)
 - `~/.codex/skills/` (legacy Codex global)
 
 **Subagents** - Scans these common paths:
-- `.github/agents/` (Copilot local sparse checkout)
-- `~/.copilot/agents/` (Copilot global sparse checkout)
-- `.claude/agents/` (Claude local sparse checkout)
+- `~/.agents/agents/` (Copilot global sparse checkout)
 - `~/.claude/agents/` (Claude global sparse checkout)
-- `.codex/agents/` (Codex local generated TOML)
 - `~/.codex/agents/` (Codex global generated TOML)
-- `.agents/agents/` (legacy Codex local sparse checkout)
+- `.agents/agents/` (Copilot local sparse checkout)
+- `.claude/agents/` (Claude local sparse checkout)
+- `.codex/agents/` (Codex local generated TOML)
+- `.github/agents/` (legacy Copilot local sparse checkout)
+- `~/.copilot/agents/` (legacy Copilot global sparse checkout)
 
 ---
 

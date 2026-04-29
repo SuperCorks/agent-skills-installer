@@ -299,13 +299,13 @@ describe('.gitignore Integration', () => {
       const gitignorePath = join(tempDir.path, '.gitignore');
       
       // Simulate what the CLI does
-      const pathToIgnore = '.github/skills';
+      const pathToIgnore = '.agents/skills';
       const entry = `\n# AI Agent Skills\n${pathToIgnore}/\n`;
       writeFileSync(gitignorePath, entry.trim() + '\n');
 
       const content = readFileSync(gitignorePath, 'utf-8');
       expect(content).toContain('# AI Agent Skills');
-      expect(content).toContain('.github/skills/');
+      expect(content).toContain('.agents/skills/');
     });
 
     it('should append to existing .gitignore', async () => {
@@ -313,7 +313,7 @@ describe('.gitignore Integration', () => {
       writeFileSync(gitignorePath, 'node_modules/\n.env\n');
 
       // Simulate appending
-      const pathToIgnore = '.github/skills';
+      const pathToIgnore = '.agents/skills';
       const entry = `\n# AI Agent Skills\n${pathToIgnore}/\n`;
       
       const existing = readFileSync(gitignorePath, 'utf-8');
@@ -323,17 +323,17 @@ describe('.gitignore Integration', () => {
       expect(content).toContain('node_modules/');
       expect(content).toContain('.env');
       expect(content).toContain('# AI Agent Skills');
-      expect(content).toContain('.github/skills/');
+      expect(content).toContain('.agents/skills/');
     });
 
     it('should not duplicate entry if skills path already in .gitignore', async () => {
       const gitignorePath = join(tempDir.path, '.gitignore');
-      writeFileSync(gitignorePath, '.github/skills/\n');
+      writeFileSync(gitignorePath, '.agents/skills/\n');
 
       const content = readFileSync(gitignorePath, 'utf-8');
       
       // Check if already present (what the CLI does)
-      const normalizedPath = '.github/skills';
+      const normalizedPath = '.agents/skills';
       const alreadyPresent = content.includes(normalizedPath);
 
       expect(alreadyPresent).toBe(true);
@@ -347,18 +347,18 @@ describe('.gitignore Integration', () => {
 
 describe('Path Selection Options', () => {
   describe('User Story: Choose standard installation paths', () => {
-    it('should offer .github/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
-      expect(standardPaths).toContain('.github/skills/');
+    it('should offer ~/.agents/skills/ as a global option', () => {
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '.agents/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('~/.agents/skills/');
     });
 
-    it('should offer ~/.codex/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
-      expect(standardPaths).toContain('~/.codex/skills/');
+    it('should offer .agents/skills/ as a local option', () => {
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '.agents/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('.agents/skills/');
     });
 
     it('should offer .claude/skills/ as an option', () => {
-      const standardPaths = ['.github/skills/', '~/.codex/skills/', '.claude/skills/'];
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '.agents/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.claude/skills/');
     });
 

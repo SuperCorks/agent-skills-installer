@@ -377,7 +377,7 @@ describe('Gitignore Edge Cases', () => {
       expect(existsSync(gitignorePath)).toBe(false);
       
       // Simulate CLI creating it
-      writeFileSync(gitignorePath, '# AI Agent Skills\n.github/skills/\n');
+      writeFileSync(gitignorePath, '# AI Agent Skills\n.agents/skills/\n');
       
       expect(existsSync(gitignorePath)).toBe(true);
     });
@@ -389,12 +389,12 @@ describe('Gitignore Edge Cases', () => {
       writeFileSync(gitignorePath, existingContent);
       
       // Simulate CLI appending
-      const addition = '\n# AI Agent Skills\n.github/skills/\n';
+      const addition = '\n# AI Agent Skills\n.agents/skills/\n';
       writeFileSync(gitignorePath, existingContent + addition);
       
       const finalContent = require('fs').readFileSync(gitignorePath, 'utf-8');
       expect(finalContent).toContain('node_modules/');
-      expect(finalContent).toContain('.github/skills/');
+      expect(finalContent).toContain('.agents/skills/');
     });
   });
 });
