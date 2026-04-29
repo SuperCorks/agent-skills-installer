@@ -256,7 +256,7 @@ npx @supercorks/skills-installer --version
    - Select installation path
    - Configure .gitignore (fresh install only)
    - Select subagents
-   - Clone and checkout
+   - Clone and checkout Markdown agents, or convert selected agents to Codex TOML for Codex targets
 
 ### Exit Codes
 
@@ -285,24 +285,38 @@ Subagents are detected from the repository by:
 3. Fetching and parsing frontmatter only when the user expands an item (`→`)
 4. Extracting name and description from YAML frontmatter (supports `---` and ` ```chatagent` formats)
 
-### Sparse Checkout
+### Install Backends
 
-The installer uses Git sparse-checkout in non-cone mode for precise control:
+For skills and Markdown agent targets, the installer uses Git sparse-checkout in non-cone mode for precise control:
 - Only selected skill folders or subagent files are checked out
 - Root-level files (README, etc.) are excluded
 - Full git history is preserved for updates
 
+For Codex agent targets, the installer fetches selected Markdown `.agent.md` source files and writes generated TOML files:
+- `.codex/agents/` for project-scoped Codex custom agents
+- `~/.codex/agents/` for user-scoped Codex custom agents
+- Generated files include a source marker so future runs can update/remove only installer-managed files
+- Manual TOML files in the same directory are left untouched
+
 ### Existing Installation Detection
 
 **Skills** - Scans these common paths for `.git` directories:
-- `.github/skills/` (Copilot)
-- `~/.codex/skills/` (Codex)
-- `.claude/skills/` (Claude)
+- `.github/skills/` (Copilot local)
+- `~/.copilot/skills/` (Copilot global)
+- `.agents/skills/` (Codex local)
+- `~/.agents/skills/` (Codex global)
+- `.claude/skills/` (Claude local)
+- `~/.claude/skills/` (Claude global)
+- `~/.codex/skills/` (legacy Codex global)
 
-**Subagents** - Scans these common paths for `.git` directories:
-- `.github/agents/` (Copilot)
-- `.agents/agents/` (Codex)
-- `.claude/agents/` (Claude)
+**Subagents** - Scans these common paths:
+- `.github/agents/` (Copilot local sparse checkout)
+- `~/.copilot/agents/` (Copilot global sparse checkout)
+- `.claude/agents/` (Claude local sparse checkout)
+- `~/.claude/agents/` (Claude global sparse checkout)
+- `.codex/agents/` (Codex local generated TOML)
+- `~/.codex/agents/` (Codex global generated TOML)
+- `.agents/agents/` (legacy Codex local sparse checkout)
 
 ---
 
