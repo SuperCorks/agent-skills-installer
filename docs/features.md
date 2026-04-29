@@ -91,11 +91,11 @@ When existing installations are detected, they appear at the top of the list wit
 ? Select one or more installations to manage, or choose new locations:
 ❯ .github/skills/ (copilot | local | 2 skills installed)
   ── New installation ──
-   ~/.copilot/skills/ (copilot | global | 21 skills)
-   .agents/skills/ (codex | local | 21 skills)
-   ~/.agents/skills/ (codex | global | 21 skills)
-   .claude/skills/ (claude | local | 21 skills)
-   ~/.claude/skills/ (claude | global | 21 skills)
+   ~/.copilot/skills/ (copilot | global | 24 skills)
+   .agents/skills/ (codex | local | 24 skills)
+   ~/.agents/skills/ (codex | global | 24 skills)
+   .claude/skills/ (claude | local | 24 skills)
+   ~/.claude/skills/ (claude | global | 24 skills)
   Custom path...
 ```
 

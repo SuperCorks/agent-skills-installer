@@ -18,7 +18,7 @@ npx @supercorks/skills-installer install
 
 1. **Choose installation type** - Install skills, subagents, or both.
 
-2. **Choose installation path(s)** - Select one or more locations where resources should be installed. The installer labels each option with harness, scope, and available count, for example `.github/skills/ (copilot | local | 21 skills)`.
+2. **Choose installation path(s)** - Select one or more locations where resources should be installed. The installer labels each option with harness, scope, and available count, for example `.github/skills/ (copilot | local | 24 skills)`.
 
    Skills:
    - `.github/skills/` (copilot | local)
