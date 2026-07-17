@@ -4,16 +4,18 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { join, resolve } from 'path';
+import { dirname, join, resolve } from 'path';
 import { existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, mkdtempSync } from 'fs';
 import { tmpdir, homedir } from 'os';
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
 
 // Import the module under test
 import {
   isGitAvailable,
   isInsideGitWorkTree,
   listCheckedOutSkills,
+  updateSparseCheckout,
+  updateSubagentsSparseCheckout,
   checkSkillsForUpdates,
   checkSubagentsForUpdates,
 } from '../../lib/git.js';
@@ -69,6 +71,66 @@ function createMockGitRepo(basePath, sparseCheckoutPatterns = []) {
   writeFileSync(join(gitDir, 'HEAD'), 'ref: refs/heads/main\n');
   
   return gitDir;
+}
+
+function git(args, cwd) {
+  return execFileSync('git', args, {
+    cwd,
+    stdio: ['ignore', 'pipe', 'pipe']
+  }).toString().trim();
+}
+
+function writeRepoFile(root, filePath, content) {
+  const absolutePath = join(root, filePath);
+  mkdirSync(dirname(absolutePath), { recursive: true });
+  writeFileSync(absolutePath, content);
+}
+
+function commitAll(cwd, message) {
+  git(['add', '.'], cwd);
+  git(['commit', '-m', message], cwd);
+}
+
+function createRemoteFixture(files) {
+  const remoteDir = createTempDir();
+  const sourceDir = createTempDir();
+
+  git(['init', '--bare'], remoteDir.path);
+  git(['init'], sourceDir.path);
+  git(['config', 'user.email', 'installer-tests@example.com'], sourceDir.path);
+  git(['config', 'user.name', 'Installer Tests'], sourceDir.path);
+
+  for (const [filePath, content] of Object.entries(files)) {
+    writeRepoFile(sourceDir.path, filePath, content);
+  }
+
+  commitAll(sourceDir.path, 'initial content');
+  git(['branch', '-M', 'main'], sourceDir.path);
+  git(['remote', 'add', 'origin', remoteDir.path], sourceDir.path);
+  git(['push', '-u', 'origin', 'main'], sourceDir.path);
+
+  return {
+    remotePath: remoteDir.path,
+    sourcePath: sourceDir.path,
+    cleanup: () => {
+      remoteDir.cleanup();
+      sourceDir.cleanup();
+    }
+  };
+}
+
+function cloneSparseRepo(targetPath, remotePath, patterns) {
+  mkdirSync(targetPath, { recursive: true });
+  git(['clone', '--no-checkout', '--sparse', remotePath, '.'], targetPath);
+  git(['sparse-checkout', 'init', '--no-cone'], targetPath);
+  writeFileSync(join(targetPath, '.git', 'info', 'sparse-checkout'), patterns.join('\n') + '\n');
+  git(['checkout', '-B', 'main', 'origin/main'], targetPath);
+}
+
+function pushRemoteChange(sourcePath, filePath, content, message) {
+  writeRepoFile(sourcePath, filePath, content);
+  commitAll(sourcePath, message);
+  git(['push'], sourcePath);
 }
 
 // ============================================================================
@@ -355,6 +417,75 @@ describe('Sparse Clone Operations', () => {
       expect(content).toContain('/new-skill-a/');
       expect(content).toContain('/new-skill-b/');
       expect(content).not.toContain('/old-skill/');
+    });
+
+    it('should fast-forward before applying selected skill patterns', async () => {
+      const fixture = createRemoteFixture({
+        'skill-a/SKILL.md': 'version 1\n',
+        'skill-b/SKILL.md': 'skill b\n'
+      });
+      const installDir = createTempDir();
+
+      try {
+        cloneSparseRepo(installDir.path, fixture.remotePath, ['/skill-a/']);
+        pushRemoteChange(fixture.sourcePath, 'skill-a/SKILL.md', 'version 2\n', 'update skill a');
+
+        const progress = [];
+        await updateSparseCheckout(installDir.path, ['skill-a', 'skill-b'], message => {
+          progress.push(message);
+        });
+
+        expect(readFileSync(join(installDir.path, 'skill-a', 'SKILL.md'), 'utf-8')).toBe('version 2\n');
+        expect(readFileSync(join(installDir.path, 'skill-b', 'SKILL.md'), 'utf-8')).toBe('skill b\n');
+        expect(readFileSync(join(installDir.path, '.git', 'info', 'sparse-checkout'), 'utf-8')).toContain('/skill-b/');
+        expect(progress).toContain('Fetching latest changes...');
+      } finally {
+        fixture.cleanup();
+        installDir.cleanup();
+      }
+    });
+
+    it('should fail loudly when local skill changes block the update', async () => {
+      const fixture = createRemoteFixture({
+        'skill-a/SKILL.md': 'version 1\n'
+      });
+      const installDir = createTempDir();
+
+      try {
+        cloneSparseRepo(installDir.path, fixture.remotePath, ['/skill-a/']);
+        pushRemoteChange(fixture.sourcePath, 'skill-a/SKILL.md', 'version 2\n', 'update skill a');
+        writeFileSync(join(installDir.path, 'skill-a', 'SKILL.md'), 'local edit\n');
+
+        await expect(updateSparseCheckout(installDir.path, ['skill-a']))
+          .rejects
+          .toThrow(/Could not update sparse checkout/);
+        expect(readFileSync(join(installDir.path, 'skill-a', 'SKILL.md'), 'utf-8')).toBe('local edit\n');
+      } finally {
+        fixture.cleanup();
+        installDir.cleanup();
+      }
+    });
+
+    it('should fast-forward before applying selected subagent patterns', async () => {
+      const fixture = createRemoteFixture({
+        'Developer.agent.md': 'version 1\n',
+        'Reviewer.agent.md': 'reviewer\n'
+      });
+      const installDir = createTempDir();
+
+      try {
+        cloneSparseRepo(installDir.path, fixture.remotePath, ['/Developer.agent.md']);
+        pushRemoteChange(fixture.sourcePath, 'Developer.agent.md', 'version 2\n', 'update developer');
+
+        await updateSubagentsSparseCheckout(installDir.path, ['Developer.agent.md', 'Reviewer.agent.md']);
+
+        expect(readFileSync(join(installDir.path, 'Developer.agent.md'), 'utf-8')).toBe('version 2\n');
+        expect(readFileSync(join(installDir.path, 'Reviewer.agent.md'), 'utf-8')).toBe('reviewer\n');
+        expect(readFileSync(join(installDir.path, '.git', 'info', 'sparse-checkout'), 'utf-8')).toContain('/Reviewer.agent.md');
+      } finally {
+        fixture.cleanup();
+        installDir.cleanup();
+      }
     });
   });
 });
