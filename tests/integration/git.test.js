@@ -18,6 +18,8 @@ import {
   updateSubagentsSparseCheckout,
   checkSkillsForUpdates,
   checkSubagentsForUpdates,
+  checkSkillsForDirtyChanges,
+  checkSubagentsForDirtyChanges,
 } from '../../lib/git.js';
 
 // ============================================================================
@@ -64,7 +66,7 @@ function createMockGitRepo(basePath, sparseCheckoutPatterns = []) {
 \tfilemode = true
 \tbare = false
 [remote "origin"]
-\turl = https://github.com/supercorks/agent-skills.git
+\turl = ${join(basePath, 'missing-remote.git')}
 \tfetch = +refs/heads/*:refs/remotes/origin/*
 `);
 
@@ -482,6 +484,47 @@ describe('Sparse Clone Operations', () => {
         expect(readFileSync(join(installDir.path, 'Developer.agent.md'), 'utf-8')).toBe('version 2\n');
         expect(readFileSync(join(installDir.path, 'Reviewer.agent.md'), 'utf-8')).toBe('reviewer\n');
         expect(readFileSync(join(installDir.path, '.git', 'info', 'sparse-checkout'), 'utf-8')).toContain('/Reviewer.agent.md');
+      } finally {
+        fixture.cleanup();
+        installDir.cleanup();
+      }
+    });
+
+    it('should report dirty skill folders', async () => {
+      const fixture = createRemoteFixture({
+        'skill-a/SKILL.md': 'version 1\n',
+        'skill-b/SKILL.md': 'version 1\n'
+      });
+      const installDir = createTempDir();
+
+      try {
+        cloneSparseRepo(installDir.path, fixture.remotePath, ['/skill-a/', '/skill-b/']);
+        writeFileSync(join(installDir.path, 'skill-a', 'SKILL.md'), 'local edit\n');
+        writeRepoFile(installDir.path, 'skill-b/local.txt', 'untracked\n');
+
+        const dirty = await checkSkillsForDirtyChanges(installDir.path, ['skill-a', 'skill-b']);
+
+        expect(Array.from(dirty).sort()).toEqual(['skill-a', 'skill-b']);
+      } finally {
+        fixture.cleanup();
+        installDir.cleanup();
+      }
+    });
+
+    it('should report dirty subagent files', async () => {
+      const fixture = createRemoteFixture({
+        'Developer.agent.md': 'version 1\n',
+        'Reviewer.agent.md': 'reviewer\n'
+      });
+      const installDir = createTempDir();
+
+      try {
+        cloneSparseRepo(installDir.path, fixture.remotePath, ['/Developer.agent.md', '/Reviewer.agent.md']);
+        writeFileSync(join(installDir.path, 'Developer.agent.md'), 'local edit\n');
+
+        const dirty = await checkSubagentsForDirtyChanges(installDir.path, ['Developer.agent.md', 'Reviewer.agent.md']);
+
+        expect(Array.from(dirty)).toEqual(['Developer.agent.md']);
       } finally {
         fixture.cleanup();
         installDir.cleanup();

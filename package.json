@@ -4,7 +4,7 @@
   "description": "Interactive CLI installer for AI agent skills and subagents",
   "type": "module",
   "bin": {
-    "skills-installer": "./bin/install.js"
+    "skills-installer": "bin/install.js"
   },
   "files": [
     "bin/",

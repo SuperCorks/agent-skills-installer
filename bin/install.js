@@ -34,7 +34,9 @@ import {
   listCheckedOutSubagents,
   updateSubagentsSparseCheckout,
   checkSkillsForUpdates,
-  checkSubagentsForUpdates
+  checkSubagentsForUpdates,
+  checkSkillsForDirtyChanges,
+  checkSubagentsForDirtyChanges
 } from '../lib/git.js';
 import { createRequire } from 'module';
 import { allAgentDetectionTargets, allSkillDetectionTargets, getAgentInstallMode } from '../lib/install-targets.js';
@@ -260,11 +262,13 @@ async function runSkillsInstall() {
 
   const installedSkills = uniqueItems(targetContexts.flatMap(context => context.installedSkills));
   const skillsNeedingUpdate = unionSets(targetContexts.map(context => context.skillsNeedingUpdate));
+  const dirtySkills = unionSets(targetContexts.map(context => context.dirtySkills));
 
   const selectedSkills = await promptSkillSelection(
     skills,
     installedSkills,
     skillsNeedingUpdate,
+    dirtySkills,
     (skillFolder) => fetchSkillMetadata(skillFolder)
   );
 
@@ -309,17 +313,34 @@ async function prepareSkillsInstallTarget(existingInstalls, target) {
 
   // Check for updates if in manage mode
   let skillsNeedingUpdate = new Set();
+  let dirtySkills = new Set();
   if (isManageMode) {
     const updateSpinner = showSpinner('Checking for available updates...');
+    let couldCheckUpdates = true;
     try {
       skillsNeedingUpdate = await checkSkillsForUpdates(absoluteInstallPath, installedSkills);
-      if (skillsNeedingUpdate.size > 0) {
-        updateSpinner.stop(`✅ Found ${skillsNeedingUpdate.size} skill${skillsNeedingUpdate.size !== 1 ? 's' : ''} with updates available`);
-      } else {
-        updateSpinner.stop('✅ All installed skills are up to date');
-      }
     } catch {
-      updateSpinner.stop('⚠️  Could not check for updates');
+      couldCheckUpdates = false;
+    }
+
+    try {
+      dirtySkills = await checkSkillsForDirtyChanges(absoluteInstallPath, installedSkills);
+    } catch {
+      // Dirty status is advisory; keep the install flow moving if it cannot be read.
+    }
+
+    const dirtyText = dirtySkills.size > 0
+      ? `; ${dirtySkills.size} dirty`
+      : '';
+
+    if (!couldCheckUpdates) {
+      updateSpinner.stop(`⚠️  Could not check for updates${dirtyText}`);
+    } else {
+      if (skillsNeedingUpdate.size > 0) {
+        updateSpinner.stop(`✅ Found ${skillsNeedingUpdate.size} skill${skillsNeedingUpdate.size !== 1 ? 's' : ''} with updates available${dirtyText}`);
+      } else {
+        updateSpinner.stop(`✅ All installed skills are up to date${dirtyText}`);
+      }
     }
   }
 
@@ -344,7 +365,8 @@ async function prepareSkillsInstallTarget(existingInstalls, target) {
     isManageMode,
     shouldGitignore,
     gitignorePath,
-    skillsNeedingUpdate
+    skillsNeedingUpdate,
+    dirtySkills
   };
 }
 
@@ -457,11 +479,13 @@ async function runSubagentsInstall() {
 
   const installedAgents = uniqueItems(targetContexts.flatMap(context => context.installedAgents));
   const subagentsNeedingUpdate = unionSets(targetContexts.map(context => context.subagentsNeedingUpdate));
+  const dirtySubagents = unionSets(targetContexts.map(context => context.dirtySubagents));
 
   const selectedAgents = await promptSubagentSelection(
     subagents,
     installedAgents,
     subagentsNeedingUpdate,
+    dirtySubagents,
     (filename) => fetchSubagentMetadata(filename)
   );
 
@@ -515,20 +539,38 @@ async function prepareSubagentsInstallTarget(existingInstalls, target) {
 
   // Check for updates if in manage mode
   let subagentsNeedingUpdate = new Set();
+  let dirtySubagents = new Set();
   if (isManageMode) {
     const updateSpinner = showSpinner('Checking for available updates...');
+    let couldCheckUpdates = true;
     try {
       subagentsNeedingUpdate = installMode === 'sparse-git'
         ? await checkSubagentsForUpdates(absoluteInstallPath, installedAgents)
         : await checkCodexAgentUpdates(absoluteInstallPath, installedAgents);
-
-      if (subagentsNeedingUpdate.size > 0) {
-        updateSpinner.stop(`✅ Found ${subagentsNeedingUpdate.size} subagent${subagentsNeedingUpdate.size !== 1 ? 's' : ''} with updates available`);
-      } else {
-        updateSpinner.stop('✅ All installed subagents are up to date');
-      }
     } catch {
-      updateSpinner.stop('⚠️  Could not check for updates');
+      couldCheckUpdates = false;
+    }
+
+    try {
+      dirtySubagents = installMode === 'sparse-git'
+        ? await checkSubagentsForDirtyChanges(absoluteInstallPath, installedAgents)
+        : new Set();
+    } catch {
+      // Dirty status is advisory; keep the install flow moving if it cannot be read.
+    }
+
+    const dirtyText = dirtySubagents.size > 0
+      ? `; ${dirtySubagents.size} dirty`
+      : '';
+
+    if (!couldCheckUpdates) {
+      updateSpinner.stop(`⚠️  Could not check for updates${dirtyText}`);
+    } else {
+      if (subagentsNeedingUpdate.size > 0) {
+        updateSpinner.stop(`✅ Found ${subagentsNeedingUpdate.size} subagent${subagentsNeedingUpdate.size !== 1 ? 's' : ''} with updates available${dirtyText}`);
+      } else {
+        updateSpinner.stop(`✅ All installed subagents are up to date${dirtyText}`);
+      }
     }
   }
 
@@ -554,7 +596,8 @@ async function prepareSubagentsInstallTarget(existingInstalls, target) {
     isManageMode,
     shouldGitignore,
     gitignorePath,
-    subagentsNeedingUpdate
+    subagentsNeedingUpdate,
+    dirtySubagents
   };
 }
 

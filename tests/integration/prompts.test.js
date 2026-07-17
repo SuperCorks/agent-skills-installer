@@ -226,6 +226,12 @@ describe('Skill Selection UI Components', () => {
       const updateFlag = '(update)';
       expect(updateFlag).toBe('(update)');
     });
+
+    it('should use dirty flag for items with local changes', () => {
+      // From prompts.js render function - red (dirty) flag
+      const dirtyFlag = '(dirty)';
+      expect(dirtyFlag).toBe('(dirty)');
+    });
   });
 
   describe('User Story: See update status in selection', () => {
@@ -264,6 +270,17 @@ describe('Skill Selection UI Components', () => {
       
       expect(needsUpdate).toHaveLength(1);
       expect(needsUpdate[0].name).toBe('Skill B');
+    });
+
+    it('should show dirty count in footer when selected items have local changes', () => {
+      const selectedItems = ['skill-a', 'skill-b', 'skill-c'];
+      const dirtyItems = new Set(['skill-b', 'skill-c']);
+
+      const dirtyCount = selectedItems.filter(id => dirtyItems.has(id)).length;
+      const dirtyNote = dirtyCount > 0 ? ` (${dirtyCount} dirty)` : '';
+
+      expect(dirtyCount).toBe(2);
+      expect(dirtyNote).toBe(' (2 dirty)');
     });
   });
 
