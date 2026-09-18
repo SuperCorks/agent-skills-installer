@@ -4,6 +4,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 describe('Prompts Module Utilities', () => {
   
@@ -177,6 +180,105 @@ describe('Path Selection Options', () => {
       expect(getAgentInstallMode('.codex/agents/')).toBe('codex-toml');
       expect(getAgentInstallMode('~/.codex/agents/')).toBe('codex-toml');
       expect(getAgentInstallMode('.agents/agents/')).toBe('sparse-git');
+    });
+  });
+
+  describe('User Story: Install into multiple Claude profile directories', () => {
+    let homeDir;
+
+    beforeEach(() => {
+      homeDir = mkdtempSync(join(tmpdir(), 'skills-installer-home-'));
+    });
+
+    afterEach(() => {
+      rmSync(homeDir, { recursive: true, force: true });
+    });
+
+    it('should discover ~/.claude_* directories in sorted order', async () => {
+      const { discoverClaudeProfileDirs } = await import('../../lib/install-targets.js');
+      mkdirSync(join(homeDir, '.claude_work'));
+      mkdirSync(join(homeDir, '.claude_personal'));
+
+      expect(discoverClaudeProfileDirs(homeDir)).toEqual(['.claude_personal', '.claude_work']);
+    });
+
+    it('should ignore non-matching names and non-directories', async () => {
+      const { discoverClaudeProfileDirs } = await import('../../lib/install-targets.js');
+      mkdirSync(join(homeDir, '.claude'));
+      mkdirSync(join(homeDir, '.claude_'));
+      mkdirSync(join(homeDir, '.claudette'));
+      mkdirSync(join(homeDir, 'claude_work'));
+      writeFileSync(join(homeDir, '.claude_file'), '');
+
+      expect(discoverClaudeProfileDirs(homeDir)).toEqual([]);
+    });
+
+    it('should follow symlinked profile directories', async () => {
+      const { discoverClaudeProfileDirs } = await import('../../lib/install-targets.js');
+      mkdirSync(join(homeDir, 'real-profile'));
+      symlinkSync(join(homeDir, 'real-profile'), join(homeDir, '.claude_linked'));
+
+      expect(discoverClaudeProfileDirs(homeDir)).toEqual(['.claude_linked']);
+    });
+
+    it('should return no profiles when the home directory is unreadable', async () => {
+      const { discoverClaudeProfileDirs } = await import('../../lib/install-targets.js');
+
+      expect(discoverClaudeProfileDirs(join(homeDir, 'missing'))).toEqual([]);
+    });
+
+    it('should add a global skill target per profile right after ~/.claude/skills/', async () => {
+      const { getSkillInstallTargets } = await import('../../lib/install-targets.js');
+      mkdirSync(join(homeDir, '.claude_work'));
+      mkdirSync(join(homeDir, '.claude_personal'));
+
+      const targets = getSkillInstallTargets(homeDir);
+
+      expect(targets.map(target => target.path)).toEqual([
+        '~/.agents/skills/',
+        '~/.claude/skills/',
+        '~/.claude_personal/skills/',
+        '~/.claude_work/skills/',
+        '.agents/skills/',
+        '.claude/skills/'
+      ]);
+      expect(targets.find(target => target.path === '~/.claude_work/skills/')).toMatchObject({
+        harness: 'claude',
+        scope: 'global'
+      });
+    });
+
+    it('should add a global sparse-git agent target per profile right after ~/.claude/agents/', async () => {
+      const { getAgentInstallTargets, getAgentInstallMode } = await import('../../lib/install-targets.js');
+      mkdirSync(join(homeDir, '.claude_work'));
+
+      const targets = getAgentInstallTargets(homeDir);
+
+      expect(targets.map(target => target.path)).toEqual([
+        '~/.agents/agents/',
+        '~/.claude/agents/',
+        '~/.claude_work/agents/',
+        '~/.codex/agents/',
+        '.agents/agents/',
+        '.claude/agents/',
+        '.codex/agents/'
+      ]);
+      expect(getAgentInstallMode('~/.claude_work/agents/')).toBe('sparse-git');
+    });
+
+    it('should return only the standard targets when no profiles exist', async () => {
+      const { AGENT_INSTALL_TARGETS, SKILL_INSTALL_TARGETS, getAgentInstallTargets, getSkillInstallTargets } = await import('../../lib/install-targets.js');
+
+      expect(getSkillInstallTargets(homeDir)).toEqual(SKILL_INSTALL_TARGETS);
+      expect(getAgentInstallTargets(homeDir)).toEqual(AGENT_INSTALL_TARGETS);
+    });
+
+    it('should include profile targets when detecting existing installations', async () => {
+      const { allAgentDetectionTargets, allSkillDetectionTargets } = await import('../../lib/install-targets.js');
+      mkdirSync(join(homeDir, '.claude_work'));
+
+      expect(allSkillDetectionTargets(homeDir).map(target => target.path)).toContain('~/.claude_work/skills/');
+      expect(allAgentDetectionTargets(homeDir).map(target => target.path)).toContain('~/.claude_work/agents/');
     });
   });
 

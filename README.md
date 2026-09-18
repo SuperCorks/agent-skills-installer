@@ -23,12 +23,14 @@ npx @supercorks/skills-installer install
    Skills:
    - `~/.agents/skills/` (copilot/codex | global)
    - `~/.claude/skills/` (claude | global)
+   - `~/.claude_*/skills/` (claude | global, one per matching profile directory found in your home directory)
    - `.agents/skills/` (copilot/codex | local)
    - `.claude/skills/` (claude | local)
 
    Agents:
    - `~/.agents/agents/` (copilot | global)
    - `~/.claude/agents/` (claude | global)
+   - `~/.claude_*/agents/` (claude | global, one per matching profile directory found in your home directory)
    - `~/.codex/agents/` (codex | global, installed as converted TOML agents)
    - `.agents/agents/` (copilot | local)
    - `.claude/agents/` (claude | local)
