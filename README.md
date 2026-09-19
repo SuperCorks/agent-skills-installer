@@ -1,6 +1,6 @@
 # @supercorks/skills-installer
 
-Interactive CLI installer for AI agent skills and subagents. Selectively install resources for GitHub Copilot, Codex, Claude, and other AI assistants using Git sparse-checkout and Codex agent conversion where needed.
+Interactive CLI installer for AI agent skills and subagents, with a non-interactive mode for coding agents and scripts. Selectively install resources for GitHub Copilot, Codex, Claude, and other AI assistants using Git sparse-checkout and Codex agent conversion where needed.
 
 ## Usage
 
@@ -50,6 +50,83 @@ npx @supercorks/skills-installer install
    - Skills and Markdown-based agents use Git sparse-checkout for minimal download while preserving full git functionality.
    - Codex agents are generated as TOML files from the source Markdown agent definitions.
 
+## Non-interactive mode (for coding agents and scripts)
+
+Passing any of the flags below skips every prompt. Without a terminal and without flags the installer exits with a usage error instead of waiting on a prompt.
+
+```bash
+# What can be installed, and what is installed where (read-only)
+npx @supercorks/skills-installer install --list --json
+
+# Add skills / agents. Nothing already installed is removed.
+npx @supercorks/skills-installer install --yes --skills frontend-design,feature-dev --path ~/.claude/skills
+npx @supercorks/skills-installer install --yes --agents Architect,Tester --agents-path ~/.claude/agents
+npx @supercorks/skills-installer install --yes --skills all --path .claude/skills --gitignore
+
+# Remove, update
+npx @supercorks/skills-installer install --yes --remove-skills boulevard --path ~/.claude/skills
+npx @supercorks/skills-installer install --yes --update --path ~/.claude/skills
+npx @supercorks/skills-installer install --yes --update --all
+```
+
+| Flag | Behaviour |
+|------|-----------|
+| `--list` | Read-only report: available skills/agents and, per install target, what is installed, has updates, or has local changes |
+| `--skills <a,b\|all>` | Skills to add, by folder name (case-insensitive) |
+| `--agents <a,b\|all>` | Agents to add: `Architect`, `code-quality` and `Code Quality.agent.md` all work |
+| `--remove-skills`, `--remove-agents` | Remove only the named items. Names that are not installed are reported, not an error |
+| `--exact` | Make `--skills` / `--agents` the full installed set, removing everything else (what the interactive picker does) |
+| `--path <dir>` | Target directory, repeatable. Required for installs and removals. Used as the agents target when only agents are changed |
+| `--agents-path <dir>` | Agents target directory, repeatable. Required when skills and agents change in the same command |
+| `--update` | Pull the latest version of what is installed at the given paths |
+| `--all` | With `--update`: refresh every detected installation |
+| `--dry-run` | Report what would change without touching disk |
+| `--gitignore` | Add a new local install path to `.gitignore`. Never done otherwise |
+| `--json` | One JSON document on stdout; progress goes to stderr |
+| `-y`, `--yes` | Accepted for clarity; this mode never prompts |
+
+Selection is additive: `--skills` and `--agents` only add, `--remove-*` only removes, and an installation that already has the requested items is left untouched unless `--update` is passed.
+
+Exit codes: `0` success, `1` runtime failure (network, git, local changes blocking an update), `2` usage error (bad flags, unknown skill, missing `--path`).
+
+With `--json`, success looks like:
+
+```json
+{
+  "ok": true,
+  "dryRun": false,
+  "results": [
+    {
+      "kind": "skills",
+      "path": "~/.claude/skills",
+      "absolutePath": "/Users/me/.claude/skills",
+      "action": "updated",
+      "added": ["feature-dev"],
+      "removed": [],
+      "notInstalled": [],
+      "installed": ["frontend-design", "feature-dev"]
+    }
+  ]
+}
+```
+
+`action` is one of `installed`, `updated`, `unchanged`, `would-install`, `would-update`. Failures look like:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "UPDATE_FAILED",
+    "message": "Could not update sparse checkout from origin/main. ...",
+    "path": "~/.claude/skills",
+    "dirty": ["frontend-design"],
+    "completed": []
+  }
+}
+```
+
+Error codes: `USAGE`, `UNKNOWN_ITEM`, `EMPTY_SELECTION`, `NOT_INSTALLED`, `NOT_AN_INSTALLATION` (the path is a git repository that is not a skills/agents install, so it is never rewritten), `INSTALL_FAILED`, `UPDATE_FAILED`, `GIT_UNAVAILABLE`. The installer never discards local changes: a dirty or diverged checkout fails with `UPDATE_FAILED` and lists the dirty items.
+
 ## Installed repositories
 
 - Skills repo: [https://github.com/supercorks/agent-skills](https://github.com/supercorks/agent-skills)
@@ -71,7 +148,13 @@ npx @supercorks/skills-installer install
 
 ## Updating skills
 
-Since the installation uses a sparse git checkout, you can pull updates:
+Re-run the installer and pick the existing installation, or without prompts:
+
+```bash
+npx @supercorks/skills-installer install --update --all
+```
+
+Since the installation uses a sparse git checkout, you can also pull updates by hand:
 
 ```bash
 cd .agents/skills  # or wherever you installed
@@ -80,7 +163,11 @@ git pull
 
 ## Adding more skills later
 
-You can add more skills to an existing installation:
+```bash
+npx @supercorks/skills-installer install --skills new-skill-name --path .agents/skills
+```
+
+Or by hand:
 
 ```bash
 cd .agents/skills

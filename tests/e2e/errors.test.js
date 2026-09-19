@@ -28,7 +28,8 @@ function runCLI(cwd, args = [], options = {}) {
     const binPath = join(process.cwd(), 'bin', 'install.js');
     const proc = spawn('node', [binPath, ...args], {
       cwd,
-      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', ...options.env },
+      // Tests pipe stdin, so opt in to the wizard that otherwise requires a terminal
+      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', SKILLS_INSTALLER_FORCE_INTERACTIVE: '1', ...options.env },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 

@@ -255,12 +255,46 @@ npx @supercorks/skills-installer --version
    - Select subagents once
    - Clone and checkout Markdown agents, or convert selected agents to Codex TOML for Codex targets, in each selected path
 
+### Non-Interactive Flow
+
+Any flag other than `--help` / `--version` switches the CLI to non-interactive mode: it never prompts, reads everything from flags, and prints a text report or (with `--json`) a single JSON document on stdout. Progress messages go to stderr. When stdin is not a terminal and no flags are given, the CLI exits with code 2 and points at these flags instead of waiting on a prompt.
+
+```bash
+npx @supercorks/skills-installer install --list --json
+npx @supercorks/skills-installer install --yes --skills frontend-design --path ~/.claude/skills
+npx @supercorks/skills-installer install --yes --agents Architect --agents-path ~/.claude/agents
+npx @supercorks/skills-installer install --yes --remove-skills boulevard --path ~/.claude/skills
+npx @supercorks/skills-installer install --yes --update --all
+```
+
+| Flag | Behaviour |
+|------|-----------|
+| `--list` | Read-only report of available items and every install target (installed, updates, dirty) |
+| `--skills`, `--agents` | Items to add (`all` for everything). Additive: nothing else is removed |
+| `--remove-skills`, `--remove-agents` | Remove only the named items |
+| `--exact` | Treat `--skills` / `--agents` as the full installed set |
+| `--path`, `--agents-path` | Target directories (repeatable). Required for installs and removals; `--path` is the agents target when only agents change |
+| `--update` | Pull latest for the given paths; `--all` refreshes every detected installation |
+| `--dry-run` | Report planned changes without touching disk |
+| `--gitignore` | Opt in to adding a new local path to `.gitignore` |
+| `--json` | Machine-readable output |
+
+Behaviour worth knowing:
+
+- An installation that already contains the requested items is reported as `unchanged` and not pulled, unless `--update` is passed.
+- Unknown skill or agent names fail before anything is written, and the error lists the available names.
+- Removing the last item is refused (`EMPTY_SELECTION`); delete the directory instead.
+- A path that is a git repository but not a skills/agents installation is refused (`NOT_AN_INSTALLATION`), so a project repository is never rewritten.
+- Local changes or non-fast-forward history fail with `UPDATE_FAILED` and the list of dirty items. Nothing is force-overwritten.
+- With several targets the run stops at the first failure; the error includes the targets that already completed.
+
 ### Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (git not available, fetch failed, installation failed, etc.) |
+| 1 | Error (git not available, fetch failed, installation failed, local changes blocking an update, etc.) |
+| 2 | Usage error (unknown flag, invalid flag combination, unknown skill/agent, missing `--path`, no terminal for the wizard) |
 
 ---
 

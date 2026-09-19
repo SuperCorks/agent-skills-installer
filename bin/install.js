@@ -7,9 +7,8 @@
  * Usage: npx @supercorks/skills-installer install
  */
 
-import { existsSync, appendFileSync, readFileSync, writeFileSync } from 'fs';
-import { resolve, join } from 'path';
-import { homedir } from 'os';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { 
   promptInstallType,
   promptInstallPath,
@@ -39,107 +38,21 @@ import {
   checkSubagentsForDirtyChanges
 } from '../lib/git.js';
 import { createRequire } from 'module';
-import { allAgentDetectionTargets, allSkillDetectionTargets, getAgentInstallMode } from '../lib/install-targets.js';
+import { getAgentInstallMode } from '../lib/install-targets.js';
 import { checkCodexAgentUpdates, listInstalledCodexAgents, syncCodexAgents } from '../lib/codex-agents.js';
+import {
+  addToGitignore,
+  detectExistingAgentInstallations,
+  detectExistingSkillInstallations,
+  isHomePath,
+  isInGitignore,
+  resolveInstallPath
+} from '../lib/installer-core.js';
+import { EXIT_CODES, UsageError, parseCliArgs } from '../lib/cli-args.js';
+import { errorToReport, formatReport, runNonInteractive } from '../lib/noninteractive.js';
 
 const require = createRequire(import.meta.url);
 const { version: VERSION } = require('../package.json');
-
-// Common installation paths to check for existing installations
-const SKILL_PATHS = allSkillDetectionTargets().map(target => target.path);
-const AGENT_PATHS = allAgentDetectionTargets().map(target => target.path);
-
-function resolveInstallPath(path) {
-  if (path === '~') return homedir();
-  if (path.startsWith('~/')) return resolve(homedir(), path.slice(2));
-  return resolve(process.cwd(), path);
-}
-
-function isHomePath(path) {
-  return path === '~' || path.startsWith('~/');
-}
-
-function uniqueItems(items) {
-  return Array.from(new Set(items));
-}
-
-function unionSets(sets) {
-  return new Set(sets.flatMap(set => Array.from(set)));
-}
-
-/**
- * Detect existing skill installations in common paths
- * @returns {Promise<Array<{path: string, skillCount: number, skills: string[]}>>}
- */
-async function detectExistingSkillInstallations() {
-  const installations = [];
-  
-  for (const path of SKILL_PATHS) {
-    const absolutePath = resolveInstallPath(path);
-    const gitDir = join(absolutePath, '.git');
-    
-    if (existsSync(gitDir)) {
-      try {
-        const skills = await listCheckedOutSkills(absolutePath);
-        installations.push({
-          path,
-          skillCount: skills.length,
-          skills
-        });
-      } catch {
-        // Ignore errors reading existing installations
-      }
-    }
-  }
-  
-  return installations;
-}
-
-/**
- * Detect existing subagent installations in common paths
- * @returns {Promise<Array<{path: string, agentCount: number, agents: string[]}>>}
- */
-async function detectExistingAgentInstallations() {
-  const installations = [];
-  
-  for (const path of AGENT_PATHS) {
-    const absolutePath = resolveInstallPath(path);
-    const installMode = getAgentInstallMode(path);
-
-    if (installMode === 'codex-toml') {
-      try {
-        const agents = await listInstalledCodexAgents(absolutePath);
-        if (agents.length > 0) {
-          installations.push({
-            path,
-            agentCount: agents.length,
-            agents
-          });
-        }
-      } catch {
-        // Ignore errors reading existing installations
-      }
-      continue;
-    }
-
-    const gitDir = join(absolutePath, '.git');
-    
-    if (existsSync(gitDir)) {
-      try {
-        const agents = await listCheckedOutSubagents(absolutePath);
-        installations.push({
-          path,
-          agentCount: agents.length,
-          agents
-        });
-      } catch {
-        // Ignore errors reading existing installations
-      }
-    }
-  }
-  
-  return installations;
-}
 
 /**
  * Print usage information
@@ -156,45 +69,43 @@ Usage:
 Examples:
   npx @supercorks/skills-installer
   npx @supercorks/skills-installer install
+
+Non-interactive mode (for coding agents and scripts):
+  Passing any of the flags below skips every prompt. Selection is additive:
+  --skills/--agents only add, --remove-* only remove, nothing else is touched.
+
+  --list                       Show available items and the state of every install target (read-only)
+  --skills <a,b|all>           Skills to add (folder names)
+  --agents <a,b|all>           Agents to add ("Architect" or "Architect.agent.md")
+  --remove-skills <a,b>        Skills to remove
+  --remove-agents <a,b>        Agents to remove
+  --exact                      Make --skills/--agents the full installed set (removes everything else)
+  --path <dir>                 Target directory (repeatable). Required for installs and removals.
+                               Skills target, or agents target when only agents are changed.
+  --agents-path <dir>          Agents target directory (repeatable)
+  --update                     Pull the latest version of what is installed at the given paths
+  --all                        With --update: refresh every detected installation
+  --dry-run                    Report what would change without touching disk
+  --gitignore                  Add a new local install path to .gitignore (never done otherwise)
+  --json                       Print one JSON document on stdout (progress goes to stderr)
+  -y, --yes                    Accepted for clarity; non-interactive mode never prompts
+
+  Exit codes: 0 success, 1 runtime failure (network, git, dirty checkout), 2 usage error
+
+  npx @supercorks/skills-installer install --list --json
+  npx @supercorks/skills-installer install --yes --skills frontend-design,feature-dev --path ~/.claude/skills
+  npx @supercorks/skills-installer install --yes --agents Architect,Tester --agents-path ~/.claude/agents
+  npx @supercorks/skills-installer install --yes --remove-skills boulevard --path ~/.claude/skills
+  npx @supercorks/skills-installer install --yes --update --all
 `);
 }
 
-/**
- * Check if a path is already in .gitignore
- * @param {string} gitignorePath - Path to .gitignore file
- * @param {string} pathToCheck - Path to check
- * @returns {boolean}
- */
-function isInGitignore(gitignorePath, pathToCheck) {
-  if (!existsSync(gitignorePath)) {
-    return false;
-  }
-  const normalizedPath = pathToCheck.replace(/\/$/, '');
-  const content = readFileSync(gitignorePath, 'utf-8');
-  return content.includes(normalizedPath);
+function uniqueItems(items) {
+  return Array.from(new Set(items));
 }
 
-/**
- * Add a path to .gitignore if not already present
- * @param {string} gitignorePath - Path to .gitignore file
- * @param {string} pathToIgnore - Path to add to .gitignore
- */
-function addToGitignore(gitignorePath, pathToIgnore) {
-  // Normalize the path for gitignore (remove trailing slash for consistency)
-  const normalizedPath = pathToIgnore.replace(/\/$/, '');
-  const gitignoreEntry = `\n# AI Agent Skills\n${normalizedPath}/\n`;
-
-  if (existsSync(gitignorePath)) {
-    const content = readFileSync(gitignorePath, 'utf-8');
-    if (content.includes(normalizedPath)) {
-      console.log(`ℹ️  "${normalizedPath}" is already in .gitignore`);
-      return;
-    }
-    appendFileSync(gitignorePath, gitignoreEntry);
-  } else {
-    writeFileSync(gitignorePath, gitignoreEntry.trim() + '\n');
-  }
-  console.log(`✅ Added "${normalizedPath}/" to .gitignore`);
+function unionSets(sets) {
+  return new Set(sets.flatMap(set => Array.from(set)));
 }
 
 /**
@@ -757,37 +668,94 @@ function showAgentManageSuccess(installPath, allAgents, added, removed, unchange
 }
 
 /**
+ * Run without prompts and report through stdout (result) and stderr (progress)
+ * @param {object} options - Parsed non-interactive options
+ */
+async function runNonInteractiveCommand(options) {
+  const fail = (error) => {
+    if (options.json) {
+      console.log(JSON.stringify(errorToReport(error), null, 2));
+    } else {
+      showError(error.message);
+    }
+    process.exit(error.exitCode || EXIT_CODES.FAILURE);
+  };
+
+  if (!isGitAvailable()) {
+    const error = new Error('Git is not installed or not available in PATH. Please install git first.');
+    error.code = 'GIT_UNAVAILABLE';
+    fail(error);
+  }
+
+  try {
+    const report = await runNonInteractive(options, {
+      log: (message) => console.error(message)
+    });
+    console.log(options.json ? JSON.stringify(report, null, 2) : formatReport(report));
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/**
  * Parse command line arguments and run
  */
 async function main() {
-  const args = process.argv.slice(2);
-  const command = args[0];
+  let cli;
+  try {
+    cli = parseCliArgs(process.argv.slice(2));
+  } catch (error) {
+    if (!(error instanceof UsageError)) throw error;
+    if (process.argv.includes('--json')) {
+      console.log(JSON.stringify(errorToReport(error), null, 2));
+    } else {
+      showError(error.message);
+      console.error('Run with --help to see the available flags.\n');
+    }
+    process.exit(error.exitCode);
+  }
 
-  if (command === '--help' || command === '-h') {
+  if (cli.help) {
     printUsage();
     process.exit(0);
   }
 
-  if (command === '--version' || command === '-v') {
+  if (cli.version) {
     console.log(VERSION);
     process.exit(0);
   }
 
   // Default to install if no command or explicit 'install' command
-  if (!command || command === 'install') {
-    try {
-      await runInstall();
-    } catch (error) {
-      if (error.message.includes('User force closed')) {
-        console.log('\n\n👋 Installation cancelled.\n');
-        process.exit(0);
-      }
-      showError(error.message);
-      process.exit(1);
-    }
-  } else {
-    console.error(`Unknown command: ${command}`);
+  if (cli.command && cli.command !== 'install') {
+    console.error(`Unknown command: ${cli.command}`);
     printUsage();
+    process.exit(1);
+  }
+
+  if (cli.nonInteractive) {
+    await runNonInteractiveCommand(cli.options);
+    return;
+  }
+
+  // The wizard needs a terminal; without one it would wait on a prompt forever.
+  if (!process.stdin.isTTY && !process.env.SKILLS_INSTALLER_FORCE_INTERACTIVE) {
+    showError(
+      'No interactive terminal detected. Use the non-interactive flags instead, for example:\n' +
+      '  skills-installer install --list --json\n' +
+      '  skills-installer install --yes --skills <name> --path <dir>\n' +
+      'Run with --help for all flags.'
+    );
+    process.exit(EXIT_CODES.USAGE);
+  }
+
+  try {
+    await runInstall();
+  } catch (error) {
+    if (error.message.includes('User force closed')) {
+      console.log('\n\n👋 Installation cancelled.\n');
+      process.exit(0);
+    }
+    showError(error.message);
     process.exit(1);
   }
 }
