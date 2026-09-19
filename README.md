@@ -50,6 +50,29 @@ npx @supercorks/skills-installer install
    - Skills and Markdown-based agents use Git sparse-checkout for minimal download while preserving full git functionality.
    - Codex agents are generated as TOML files from the source Markdown agent definitions.
 
+## Pinning a model and reasoning effort per harness
+
+A subagent definition (`*.agent.md`) can pin a model and reasoning effort per harness using four flat frontmatter keys. Values may be quoted or unquoted.
+
+| Key | Used by | Effect |
+|-----|---------|--------|
+| `model` | Claude Code / Copilot | Read natively from the Markdown; never copied into the Codex TOML |
+| `effort` | Claude Code | `low`, `medium`, `high`, `xhigh`, `max`; also used as the Codex effort when `codex_effort` is absent |
+| `codex_model` | Codex | Emitted as `model = "..."` in the generated TOML |
+| `codex_effort` | Codex | Emitted as `model_reasoning_effort = "..."`; falls back to `effort` |
+
+```markdown
+---
+name: conductor-implementer
+description: Implements one agent-conductor task packet.
+model: claude-opus-4-8
+effort: xhigh
+codex_model: gpt-5.6-sol
+---
+```
+
+The example above generates `model = "gpt-5.6-sol"` and `model_reasoning_effort = "xhigh"` in the Codex TOML. Definitions without these keys convert exactly as before.
+
 ## Non-interactive mode (for coding agents and scripts)
 
 Passing any of the flags below skips every prompt. Without a terminal and without flags the installer exits with a usage error instead of waiting on a prompt.
@@ -138,7 +161,7 @@ Error codes: `USAGE`, `UNKNOWN_ITEM`, `EMPTY_SELECTION`, `NOT_INSTALLED`, `NOT_A
 - **Push capable** - The sparse clone preserves the full git history, allowing you to commit and push changes
 - **Auto-discovery** - Fetches the latest skill list from the repository
 - **Global and local targets** - Offers documented project/user locations for Copilot, Codex, and Claude where the resource format is compatible, with shared generic `~/.agents/skills/` and `.agents/skills/` targets for Copilot/Codex skills
-- **Codex agent conversion** - Converts Markdown subagents into Codex TOML custom agents for `.codex/agents/` targets
+- **Codex agent conversion** - Converts Markdown subagents into Codex TOML custom agents for `.codex/agents/` targets, including per-harness model/effort pinning
 - **Recursive directory creation** - Custom paths are created automatically
 
 ## Requirements

@@ -12,6 +12,7 @@ const {
   fetchAvailableSubagents,
   fetchSubagentMetadata,
   getSubagentsRepoUrl,
+  parseSubagentDefinition,
   SUBAGENTS_REPO_OWNER,
   SUBAGENTS_REPO_NAME
 } = await import('../../lib/subagents.js');
@@ -118,7 +119,65 @@ description: Creates decision-complete plans
       });
 
       const metadata = await fetchSubagentMetadata('no-frontmatter.agent.md');
-      expect(metadata).toEqual({ name: '', description: '' });
+      expect(metadata).toEqual({
+        name: '',
+        description: '',
+        model: '',
+        effort: '',
+        codexModel: '',
+        codexEffort: ''
+      });
+    });
+  });
+
+  describe('User Story: Pin model and reasoning effort per harness', () => {
+    it('should parse model, effort, codex_model and codex_effort from standard frontmatter', () => {
+      const definition = parseSubagentDefinition(`---
+name: conductor-implementer
+description: Implements one agent-conductor task packet.
+model: claude-opus-4-8
+effort: xhigh
+codex_model: gpt-5.6-sol
+codex_effort: high
+---
+
+Body`, 'conductor-implementer.agent.md');
+
+      expect(definition.name).toBe('conductor-implementer');
+      expect(definition.description).toBe('Implements one agent-conductor task packet.');
+      expect(definition.model).toBe('claude-opus-4-8');
+      expect(definition.effort).toBe('xhigh');
+      expect(definition.codexModel).toBe('gpt-5.6-sol');
+      expect(definition.codexEffort).toBe('high');
+      expect(definition.body).toBe('Body');
+      expect(definition.filename).toBe('conductor-implementer.agent.md');
+    });
+
+    it('should not read codex_model as the Claude model key', () => {
+      const definition = parseSubagentDefinition(`---
+name: Developer
+description: Builds features
+codex_model: gpt-5.6-sol
+---
+
+Body`, 'developer.agent.md');
+
+      expect(definition.model).toBe('');
+      expect(definition.codexModel).toBe('gpt-5.6-sol');
+    });
+
+    it('should return empty strings when the keys are absent', () => {
+      const definition = parseSubagentDefinition(`---
+name: Developer
+description: Builds features
+---
+
+Body`, 'developer.agent.md');
+
+      expect(definition.model).toBe('');
+      expect(definition.effort).toBe('');
+      expect(definition.codexModel).toBe('');
+      expect(definition.codexEffort).toBe('');
     });
   });
 
