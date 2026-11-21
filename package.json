@@ -33,6 +33,7 @@
     "subagents",
     "copilot",
     "claude",
+    "gemini",
     "installer",
     "cli"
   ],

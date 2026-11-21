@@ -62,11 +62,12 @@ Users can install skills to:
 |---------|-------|------|-------------|
 | Copilot/Codex | Global | `~/.agents/skills/` | Shared user skills available across repositories/workspaces |
 | Claude | Global | `~/.claude/skills/` | Personal skills available across projects |
-| Copilot/Codex | Local | `.agents/skills/` | Repository/workspace skills |
+| Gemini | Global | `~/.gemini/config/skills/` | Personal skills for Antigravity/Gemini across projects |
+| Copilot/Codex/Gemini | Local | `.agents/skills/` | Repository/workspace skills |
 | Claude | Local | `.claude/skills/` | Project skills |
 | Custom | Custom | User-defined | Any custom path |
 
-Legacy installs at `.github/skills/`, `~/.copilot/skills/`, and `~/.codex/skills/` are still detected so users can manage or migrate them, but new Copilot/Codex installs use the shared generic `.agents/skills/` and `~/.agents/skills/` paths.
+Legacy installs at `.github/skills/`, `.gemini/skills/`, `~/.copilot/skills/`, `~/.codex/skills/`, `~/.gemini/skills/`, `~/.gemini/antigravity/skills/`, and `~/.gemini/antigravity-cli/skills/` are still detected so users can manage or migrate them, while new installs use the standard targets above.
 
 #### Subagents Installation Paths
 
@@ -125,7 +126,8 @@ When existing installations are detected, standard locations stay in global-firs
 ? Select one or more installations to manage, or choose new locations:
 ❯ ~/.agents/skills/ (copilot/codex | global | 24 skills)
    ~/.claude/skills/ (claude | global | 24 skills)
-   .agents/skills/ (copilot/codex | local | 2 skills installed)
+   ~/.gemini/config/skills/ (gemini | global | 24 skills)
+   .agents/skills/ (copilot/codex/gemini | local | 2 skills installed)
    .claude/skills/ (claude | local | 24 skills)
    ── Existing legacy/custom installations ──
    .github/skills/ (copilot | legacy local | 2 skills installed)
@@ -370,11 +372,16 @@ For Codex agent targets, the installer fetches selected Markdown `.agent.md` sou
 **Skills** - Scans these common paths for `.git` directories:
 - `~/.agents/skills/` (Copilot/Codex global)
 - `~/.claude/skills/` (Claude global)
-- `.agents/skills/` (Copilot/Codex local)
+- `~/.gemini/config/skills/` (Gemini/Antigravity global)
+- `.agents/skills/` (Copilot/Codex/Gemini local)
 - `.claude/skills/` (Claude local)
 - `.github/skills/` (legacy Copilot local)
+- `.gemini/skills/` (legacy Gemini local)
 - `~/.copilot/skills/` (legacy Copilot global)
 - `~/.codex/skills/` (legacy Codex global)
+- `~/.gemini/skills/` (legacy Gemini global)
+- `~/.gemini/antigravity/skills/` (legacy Antigravity IDE global)
+- `~/.gemini/antigravity-cli/skills/` (legacy Antigravity CLI global)
 
 **Subagents** - Scans these common paths:
 - `~/.agents/agents/` (Copilot global sparse checkout)

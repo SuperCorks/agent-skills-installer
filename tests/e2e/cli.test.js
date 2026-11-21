@@ -349,17 +349,22 @@ describe('.gitignore Integration', () => {
 describe('Path Selection Options', () => {
   describe('User Story: Choose standard installation paths', () => {
     it('should offer ~/.agents/skills/ as a global option', () => {
-      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '.agents/skills/', '.claude/skills/'];
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '~/.gemini/config/skills/', '.agents/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('~/.agents/skills/');
     });
 
+    it('should offer ~/.gemini/config/skills/ as a global option', () => {
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '~/.gemini/config/skills/', '.agents/skills/', '.claude/skills/'];
+      expect(standardPaths).toContain('~/.gemini/config/skills/');
+    });
+
     it('should offer .agents/skills/ as a local option', () => {
-      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '.agents/skills/', '.claude/skills/'];
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '~/.gemini/config/skills/', '.agents/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.agents/skills/');
     });
 
     it('should offer .claude/skills/ as an option', () => {
-      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '.agents/skills/', '.claude/skills/'];
+      const standardPaths = ['~/.agents/skills/', '~/.claude/skills/', '~/.gemini/config/skills/', '.agents/skills/', '.claude/skills/'];
       expect(standardPaths).toContain('.claude/skills/');
     });
 

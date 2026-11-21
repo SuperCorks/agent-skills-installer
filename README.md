@@ -1,6 +1,6 @@
 # @supercorks/skills-installer
 
-Interactive CLI installer for AI agent skills and subagents, with a non-interactive mode for coding agents and scripts. Selectively install resources for GitHub Copilot, Codex, Claude, and other AI assistants using Git sparse-checkout and Codex agent conversion where needed.
+Interactive CLI installer for AI agent skills and subagents, with a non-interactive mode for coding agents and scripts. Selectively install resources for GitHub Copilot, Codex, Claude, Gemini/Antigravity, and other AI assistants using Git sparse-checkout and Codex agent conversion where needed.
 
 ## Usage
 
@@ -24,7 +24,8 @@ npx @supercorks/skills-installer install
    - `~/.agents/skills/` (copilot/codex | global)
    - `~/.claude/skills/` (claude | global)
    - `~/.claude_*/skills/` (claude | global, one per matching profile directory found in your home directory)
-   - `.agents/skills/` (copilot/codex | local)
+   - `~/.gemini/config/skills/` (gemini | global)
+   - `.agents/skills/` (copilot/codex/gemini | local)
    - `.claude/skills/` (claude | local)
 
    Agents:
@@ -160,7 +161,7 @@ Error codes: `USAGE`, `UNKNOWN_ITEM`, `EMPTY_SELECTION`, `NOT_INSTALLED`, `NOT_A
 - **Minimal download** - Uses `git clone --filter=blob:none` for efficient cloning
 - **Push capable** - The sparse clone preserves the full git history, allowing you to commit and push changes
 - **Auto-discovery** - Fetches the latest skill list from the repository
-- **Global and local targets** - Offers documented project/user locations for Copilot, Codex, and Claude where the resource format is compatible, with shared generic `~/.agents/skills/` and `.agents/skills/` targets for Copilot/Codex skills
+- **Global and local targets** - Offers documented project/user locations for Copilot, Codex, Claude, and Gemini/Antigravity where the resource format is compatible, with shared generic `~/.agents/skills/` (Copilot/Codex global) and `.agents/skills/` (Copilot/Codex/Gemini local) targets
 - **Codex agent conversion** - Converts Markdown subagents into Codex TOML custom agents for `.codex/agents/` targets, including per-harness model/effort pinning
 - **Recursive directory creation** - Custom paths are created automatically
 

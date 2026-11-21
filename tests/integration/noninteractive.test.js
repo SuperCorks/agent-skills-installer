@@ -389,6 +389,11 @@ describe('Non-Interactive Install', () => {
 
       expect(report.available).toEqual({ skills: AVAILABLE_SKILLS, agents: AVAILABLE_AGENTS });
       expect(report.targets.skills.map(target => target.path)).toContain('~/.claude/skills/');
+      expect(report.targets.skills).toContainEqual(expect.objectContaining({
+        path: '~/.gemini/config/skills/',
+        harness: 'gemini',
+        scope: 'global'
+      }));
       expect(report.targets.agents.map(target => target.path)).toContain('~/.codex/agents/');
       expect(report.targets.skills.find(target => target.path === `${path}/`)).toMatchObject({
         harness: 'custom',

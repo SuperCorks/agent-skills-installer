@@ -104,26 +104,45 @@ describe('Path Selection Options', () => {
       expect(standardPaths).toContain('~/.agents/skills/');
       expect(standardPaths).toContain('.claude/skills/');
       expect(standardPaths).toContain('~/.claude/skills/');
+      expect(standardPaths).toContain('~/.gemini/config/skills/');
+      expect(SKILL_INSTALL_TARGETS.find(target => target.path === '~/.gemini/config/skills/')).toMatchObject({
+        harness: 'gemini',
+        scope: 'global'
+      });
+      expect(SKILL_INSTALL_TARGETS.find(target => target.path === '.agents/skills/')).toMatchObject({
+        harness: 'copilot/codex/gemini',
+        scope: 'local'
+      });
       expect(standardPaths).not.toContain('.github/skills/');
       expect(standardPaths).not.toContain('~/.copilot/skills/');
+      expect(standardPaths).not.toContain('.gemini/skills/');
+      expect(standardPaths).not.toContain('~/.gemini/skills/');
     });
 
     it('should list global skill targets before local targets', async () => {
       const { SKILL_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
       const scopes = SKILL_INSTALL_TARGETS.map(target => target.scope);
 
-      expect(scopes).toEqual(['global', 'global', 'local', 'local']);
+      expect(scopes).toEqual(['global', 'global', 'global', 'local', 'local']);
     });
 
     it('should detect legacy skill targets without recommending them', async () => {
       const { LEGACY_SKILL_INSTALL_TARGETS, SKILL_INSTALL_TARGETS } = await import('../../lib/install-targets.js');
+      const legacyPaths = LEGACY_SKILL_INSTALL_TARGETS.map(target => target.path);
+      const standardPaths = SKILL_INSTALL_TARGETS.map(target => target.path);
 
-      expect(LEGACY_SKILL_INSTALL_TARGETS.map(target => target.path)).toContain('~/.codex/skills/');
-      expect(LEGACY_SKILL_INSTALL_TARGETS.map(target => target.path)).toContain('~/.copilot/skills/');
-      expect(LEGACY_SKILL_INSTALL_TARGETS.map(target => target.path)).toContain('.github/skills/');
-      expect(SKILL_INSTALL_TARGETS.map(target => target.path)).not.toContain('~/.codex/skills/');
-      expect(SKILL_INSTALL_TARGETS.map(target => target.path)).not.toContain('~/.copilot/skills/');
-      expect(SKILL_INSTALL_TARGETS.map(target => target.path)).not.toContain('.github/skills/');
+      for (const path of [
+        '~/.codex/skills/',
+        '~/.copilot/skills/',
+        '.github/skills/',
+        '.gemini/skills/',
+        '~/.gemini/skills/',
+        '~/.gemini/antigravity/skills/',
+        '~/.gemini/antigravity-cli/skills/'
+      ]) {
+        expect(legacyPaths).toContain(path);
+        expect(standardPaths).not.toContain(path);
+      }
     });
   });
 
@@ -239,6 +258,7 @@ describe('Path Selection Options', () => {
         '~/.claude/skills/',
         '~/.claude_personal/skills/',
         '~/.claude_work/skills/',
+        '~/.gemini/config/skills/',
         '.agents/skills/',
         '.claude/skills/'
       ]);
@@ -285,9 +305,9 @@ describe('Path Selection Options', () => {
   describe('User Story: See harness scope and count in path labels', () => {
     it('should format new target labels with harness scope and available count', async () => {
       const { formatTargetLabel } = await import('../../lib/install-targets.js');
-      const target = { path: '.agents/skills/', harness: 'copilot/codex', scope: 'local' };
+      const target = { path: '.agents/skills/', harness: 'copilot/codex/gemini', scope: 'local' };
 
-      expect(formatTargetLabel(target, 21, 'skill')).toBe('.agents/skills/ (copilot/codex | local | 21 skills)');
+      expect(formatTargetLabel(target, 21, 'skill')).toBe('.agents/skills/ (copilot/codex/gemini | local | 21 skills)');
     });
 
     it('should format existing target labels with installed count', async () => {
